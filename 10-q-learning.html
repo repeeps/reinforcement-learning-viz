@@ -65,7 +65,7 @@
   <section class="panel" data-panel="2">
     <span class="kicker" style="color:var(--v)">Step 02 — The Cliff</span>
     <h2>벼랑길: 같은 문제, 다른 성격</h2>
-    <p class="lead">아래는 <b>벼랑(🔥)</b>이 있는 길. 빠지면 −100, 시작으로 복귀. 시작(🏁)에서 목표(⭐)까지. 똑같이 ε-greedy로 학습해도 두 알고리즘이 <b>다른 길</b>을 배워요 — 직접 학습시켜 비교하세요.</p>
+    <p class="lead">아래는 <b>벼랑(🔥)</b>이 있는 길. 빠지면 −100, 시작으로 복귀. 시작(🏁)에서 목표(⭐)까지(여기선 에피소드형이라 할인 없이 γ=1). 똑같이 ε-greedy로 학습해도 두 알고리즘이 <b>다른 길</b>을 배워요 — 직접 학습시켜 비교하세요.</p>
     <div class="row" style="gap:8px;margin-bottom:8px">
       <button class="btn" id="trainCliff">▶ 학습 (2000 에피소드)</button>
       <span class="note" id="cliffStat"></span>
@@ -92,7 +92,7 @@
     <p class="note" style="margin-top:16px">→ 다음 <b>11장</b>: Q-테이블을 <b>신경망</b>으로 대체하는 함수근사와 DQN — 딥러닝과 강화학습이 만나요.</p>
   </section>
 
-  <p class="foot">// 수식 없는 직관 입문 · 모든 Q 학습은 브라우저에서 실시간 계산 · <a href="index.html">목차</a></p>
+  <p class="foot">// 수식 없는 직관 입문 · 모든 Q 학습은 브라우저에서 실시간 계산 · <a href="index.html">목차</a> · <a href="11-dqn.html" style="color:var(--q);font-weight:700">다음: 11 DQN →</a></p>
 </div>
 
 <script src="shared/lib.js"></script>

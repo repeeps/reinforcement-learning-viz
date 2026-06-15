@@ -59,7 +59,7 @@
   <section class="panel" data-panel="2">
     <span class="kicker" style="color:var(--v)">Step 02 — Reinforce Good Actions</span>
     <h2>해보고, 좋았던 행동의 확률을 올린다</h2>
-    <p class="lead">2장의 슬롯머신으로 돌아가요(당첨 확률 숨김). 매 시도: 정책 확률대로 한 기계를 골라 당기고, 받은 보상이 <b>평균보다 높으면</b> 그 기계의 선호도(확률)를 <b>올려</b>요(낮으면 내림). 이게 가장 단순한 정책경사 — 점점 최적 기계로 확률이 쏠려요.</p>
+    <p class="lead">2장에서 본 슬롯머신(밴딧) 문제로 돌아가요(기계 3대, 당첨 확률 숨김). 매 시도: 정책 확률대로 한 기계를 골라 당기고, 받은 보상이 <b>평균보다 높으면</b> 그 기계의 선호도(확률)를 <b>올려</b>요(낮으면 내림). 이게 가장 단순한 정책경사 — 점점 최적 기계로 확률이 쏠려요.</p>
     <div class="row" style="gap:8px;margin-bottom:8px">
       <button class="btn" id="s1">+1</button><button class="btn" id="s50">+50</button><button class="btn" id="s500">+500</button>
       <button class="btn" id="reset2" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">↺ 리셋</button>
@@ -86,7 +86,7 @@
     <p class="note" style="margin-top:16px">→ baseline을 <b>학습된 가치함수</b>로 두면? 정책(actor)과 가치(critic)를 합친 게 다음 <b>13장 Actor-Critic</b>이에요 — 두 접근의 좋은 점을 합쳐요.</p>
   </section>
 
-  <p class="foot">// 수식 없는 직관 입문 · 모든 정책 학습은 브라우저에서 실시간 계산 · <a href="index.html">목차</a></p>
+  <p class="foot">// 수식 없는 직관 입문 · 모든 정책 학습은 브라우저에서 실시간 계산 · <a href="index.html">목차</a> · <a href="13-actor-critic.html" style="color:var(--q);font-weight:700">다음: 13 Actor-Critic →</a></p>
 </div>
 
 <script src="shared/lib.js"></script>

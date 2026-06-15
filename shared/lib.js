@@ -205,7 +205,7 @@
           stroke="${on ? 'var(--hot)' : 'var(--line)'}" stroke-width="${on ? 3 : 1.5}"/>`;
         nodes += `<text x="${s.x}" y="${s.y + 4}" text-anchor="middle" fill="${on ? 'var(--hot)' : 'var(--ink)'}" font-size="12" font-weight="700">${s.label}</text>`;
       });
-      return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="max-width:100%;display:block">${defs}${edges}${labels}${nodes}</svg>`;
+      return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="유한 상태 기계 다이어그램${active ? ' (현재 상태: ' + (byId[active] ? byId[active].label : active) + ')' : ''}" style="max-width:100%;display:block">${defs}${edges}${labels}${nodes}</svg>`;
     }
   };
   VZ.SM = SM;
@@ -286,7 +286,7 @@
         }
       };
       walk(root);
-      return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="max-width:100%;display:block">${edges}${nodes}</svg>`;
+      return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="행동 트리 다이어그램" style="max-width:100%;display:block">${edges}${nodes}</svg>`;
     }
   };
   VZ.BT = BT;
@@ -474,7 +474,7 @@
         lx += 26 + (s.label.length * 7.2);
       });
     }
-    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="max-width:100%;display:block">${g}</svg>`;
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${opts.aria || (opts.ylab ? opts.ylab + ' 곡선' : '꺾은선 차트')}" style="max-width:100%;display:block">${g}</svg>`;
   }
   VZ.linePlot = linePlot;
 })(window);
