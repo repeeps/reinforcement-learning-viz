@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>10 Q-learning & SARSA · 강화학습, 눈으로 보기</title>
+<link rel="stylesheet" href="shared/theme.css">
+<style>
+  .gridwrap{display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;}
+  .legend{font-size:12px; color:var(--faint); line-height:1.7; font-family:'JetBrains Mono',monospace;}
+  .two{display:flex; gap:18px; flex-wrap:wrap;}
+  .two .lab{font-size:12px; font-weight:700; font-family:'JetBrains Mono',monospace; text-align:center; margin-bottom:4px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topnav" id="topnav"></div>
+
+  <header>
+    <div class="tag">PART 3 · Chapter 10</div>
+    <h1>Q-learning & SARSA — 경험으로 최적 정책을 배우다</h1>
+    <p class="intro">지금까진 "정책의 가치를 평가"했어요. 이제 진짜 목표 — <b>모델 없이, 경험만으로 최적 정책을 학습</b>해요. 핵심은 행동가치 <b>Q(s,a)</b>를 TD로 갱신하는 것. 그러면 "각 상태에서 Q가 가장 큰 행동"이 곧 정책이 돼요. 대표 두 방법 Q-learning과 SARSA의 미묘하지만 중요한 차이를 봐요.</p>
+  </header>
+
+  <nav class="stepper" id="stepper">
+    <button data-s="0" class="active">00 · 평가에서 제어로</button>
+    <button data-s="1">01 · Q-learning</button>
+    <button data-s="2">02 · SARSA vs Q</button>
+    <button data-s="3">03 · 정리</button>
+  </nav>
+
+  <!-- STEP 0 -->
+  <section class="panel show" data-panel="0">
+    <span class="kicker" style="color:var(--hot)">Step 00 — Control</span>
+    <h2>가치를 평가하는 걸 넘어, 최선을 찾기</h2>
+    <p class="lead">"주어진 정책이 얼마나 좋은가"(평가)에서 "<b>가장 좋은 정책은 무엇인가</b>"(제어)로 넘어가요. 비결: 상태가치 V 대신 <b>행동가치 Q(s,a)</b>를 배우는 것.</p>
+    <div class="callout" style="margin-top:6px">
+      <p style="margin:0 0 8px"><b style="color:var(--good)">왜 Q인가</b>: V만 있으면 "어디로 갈지" 정하려면 모델(다음 상태)이 필요해요. 하지만 <b>Q(s,a)</b>가 있으면 모델 없이도 "각 상태에서 Q가 가장 큰 행동"을 고르면 끝 — 그게 정책이에요.</p>
+      <p style="margin:0"><b style="color:var(--q)">TD 제어</b>: 9장의 TD 갱신을 Q에 적용 + 행동은 <b>ε-greedy</b>(대부분 최선, 가끔 탐험)로. 탐험하며 Q를 채워가면 최적 정책이 떠올라요.</p>
+    </div>
+    <p class="note" style="margin-top:14px">→ 탐험이 필요해요(안 가본 행동의 Q는 모르니까). 그래서 2장의 <b>탐험 vs 활용</b>이 여기서 다시 등장해요.</p>
+  </section>
+
+  <!-- STEP 1 -->
+  <section class="panel" data-panel="1">
+    <span class="kicker" style="color:var(--q)">Step 01 — Q-learning</span>
+    <h2>경험으로 Q를 채우면, 정책이 떠오른다</h2>
+    <p class="lead">에이전트가 ε-greedy로 돌아다니며 매 걸음 <b>Q(s,a) ← Q + α[r + γ·maxₐ′Q(s′,a′) − Q]</b> 로 갱신해요. 처음엔 엉망이지만 에피소드가 쌓이면 <b>최적 정책</b>(화살표)과 가치(색)가 나타나요. (모델은 전혀 안 썼어요!)</p>
+    <div class="row" style="gap:8px;margin-bottom:8px">
+      <button class="btn" id="e10">+10 에피소드</button><button class="btn" id="e100">+100</button>
+      <button class="btn" id="reset1" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">↺ 리셋</button>
+    </div>
+    <div class="gridwrap">
+      <div><div id="gw1"></div>
+        <div class="legend" style="margin-top:8px">색=maxₐQ(상태가치) · 화살표=학습된 정책 · ⭐+1 🕳️−1 걸음−0.04</div></div>
+      <div style="flex:1;min-width:230px">
+        <div id="info1" class="callout q"></div>
+        <div class="chart-wrap" id="chart1" style="margin-top:10px"></div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:14px">→ 에피소드당 보상이 <b>올라가</b> 최적에 가까워져요. Q-learning은 행동은 ε-greedy로 하면서 <b>목표는 max</b>(최선을 가정)로 잡아요 — 이걸 <b>오프폴리시</b>라 해요.</p>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="panel" data-panel="2">
+    <span class="kicker" style="color:var(--v)">Step 02 — The Cliff</span>
+    <h2>벼랑길: 같은 문제, 다른 성격</h2>
+    <p class="lead">아래는 <b>벼랑(🔥)</b>이 있는 길. 빠지면 −100, 시작으로 복귀. 시작(🏁)에서 목표(⭐)까지. 똑같이 ε-greedy로 학습해도 두 알고리즘이 <b>다른 길</b>을 배워요 — 직접 학습시켜 비교하세요.</p>
+    <div class="row" style="gap:8px;margin-bottom:8px">
+      <button class="btn" id="trainCliff">▶ 학습 (2000 에피소드)</button>
+      <span class="note" id="cliffStat"></span>
+    </div>
+    <div class="two">
+      <div><div class="lab" style="color:var(--q)">Q-learning (오프폴리시)</div><div id="gwQ"></div></div>
+      <div><div class="lab" style="color:var(--hot)">SARSA (온폴리시)</div><div id="gwS"></div></div>
+    </div>
+    <div class="callout v" style="margin-top:12px" id="cliffInfo"></div>
+    <p class="note" style="margin-top:12px">→ <b>Q-learning</b>은 벼랑 <b>바로 옆 최단길</b>(최적!)을 배워요 — 목표를 max로 잡아 "탐험만 안 하면 최선"이라 보거든요. <b>SARSA</b>는 학습 중 ε-탐험으로 가끔 벼랑에 빠지는 걸 <b>겪으며</b> 배우니, 벼랑에서 <b>한 칸 떨어진 안전길</b>을 택해요. 둘 다 맞아요 — "최적이냐 vs 탐험 중 안전이냐"의 차이.</p>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="panel" data-panel="3">
+    <span class="kicker" style="color:var(--good)">Step 03 — Recap</span>
+    <h2>오프폴리시 vs 온폴리시</h2>
+    <div class="twocol" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="callout q"><div class="ttl">Q-learning (오프폴리시)</div><p style="margin:0">목표 = r + γ·<b>maxₐ′</b>Q(s′,a′). 행동(ε-greedy)과 무관하게 <b>최적</b>을 학습. 대담하게 최적길.</p></div>
+      <div class="callout" style="background:rgba(251,191,36,.06);border-color:rgba(251,191,36,.25)"><div class="ttl" style="color:var(--hot)">SARSA (온폴리시)</div><p style="margin:0">목표 = r + γ·Q(s′,<b>a′</b>). 실제 한 행동 a′(ε-greedy)로 학습. 탐험 위험까지 반영해 <b>안전</b>하게.</p></div>
+    </div>
+    <div class="callout good" style="margin-top:14px">
+      <p style="margin:0">둘 다 <b>모델 없이 TD로 최적/안전 정책을 학습</b>하는 제어 알고리즘이에요. 표(Q-테이블)로 풀 수 있는 건 상태가 <b>적을 때</b> 얘기 — 바둑·아타리처럼 상태가 천문학적이면 테이블이 불가능해요. 그땐?</p>
+    </div>
+    <p class="note" style="margin-top:16px">→ 다음 <b>11장</b>: Q-테이블을 <b>신경망</b>으로 대체하는 함수근사와 DQN — 딥러닝과 강화학습이 만나요.</p>
+  </section>
+
+  <p class="foot">// 수식 없는 직관 입문 · 모든 Q 학습은 브라우저에서 실시간 계산 · <a href="index.html">목차</a></p>
+</div>
+
+<script src="shared/lib.js"></script>
+<script>
+VZ.mountTopnav('#topnav', 'CH 10 · Q-learning');
+VZ.setupStepper();
+const RL = VZ.RL;
+const argmaxTie=a=>{ const mx=Math.max(...a),idx=[]; a.forEach((x,i)=>{if(x===mx)idx.push(i);}); return idx[Math.floor(Math.random()*idx.length)]; };
+
+// ---------- STEP 1 : Q-learning (4x4) ----------
+(function(){
+  const env={rows:4,cols:4,goal:[0,3],pit:[1,3],start:[3,0]}, GAMMA=0.9, STEP=-0.04, ALPHA=0.5;
+  const reward=(r,c)=> RL.isGoal(env,r,c)?1 : RL.isPit(env,r,c)?-1 : STEP;
+  const K=(r,c)=>r+','+c;
+  let Q, eps, ret, hist;
+  function reset(){ Q={}; for(let r=0;r<4;r++)for(let c=0;c<4;c++)Q[K(r,c)]=[0,0,0,0]; eps=0; ret=[]; hist=[]; render(); info('▶ +10 / +100으로 Q-learning을 학습시켜 보세요.'); }
+  function episode(){
+    let [r,c]=env.start, steps=0, R=0; const EPS=Math.max(0.05, 0.3*Math.pow(0.99,eps));
+    while(!RL.isTerminal(env,r,c) && steps<60){
+      const a = Math.random()<EPS ? Math.floor(Math.random()*4) : argmaxTie(Q[K(r,c)]);
+      const [nr,nc]=RL.stepState(env,r,c,a); const rw=reward(nr,nc); R+=rw;
+      const tgt = rw + (RL.isTerminal(env,nr,nc)?0:GAMMA*Math.max(...Q[K(nr,nc)]));
+      Q[K(r,c)][a] += ALPHA*(tgt - Q[K(r,c)][a]);
+      r=nr;c=nc;steps++;
+    }
+    eps++; ret.push(R);
+    if(eps<=40 || eps%5===0){ const w=ret.slice(-10); hist.push([eps, w.reduce((a,b)=>a+b,0)/w.length]); }
+  }
+  function Vgrid(){ const g=[]; for(let r=0;r<4;r++){g.push([]);for(let c=0;c<4;c++){g[r].push(RL.isTerminal(env,r,c)?0:Math.max(...Q[K(r,c)]));}} return g; }
+  function polGrid(){ const g=[]; for(let r=0;r<4;r++){g.push([]);for(let c=0;c<4;c++){
+    if(RL.isTerminal(env,r,c)){g[r].push(null);continue;} const q=Q[K(r,c)]; const mx=Math.max(...q),mn=Math.min(...q);
+    g[r].push(mx-mn<1e-6?null:q.indexOf(mx)); }} return g; }
+  function render(){
+    document.getElementById('gw1').innerHTML = RL.gridSVG(env,{cell:60, V:Vgrid(), policy:polGrid(), showVals:true});
+    if(hist.length>1) document.getElementById('chart1').innerHTML = VZ.linePlot([{pts:hist, color:'var(--q)', label:'보상'}],{W:300,H:150,xlab:'에피소드',legend:false});
+    else document.getElementById('chart1').innerHTML='';
+  }
+  function info(m){ document.getElementById('info1').innerHTML=`<div class="ttl" style="color:var(--q)">에피소드 ${eps}회</div><p style="margin:0">${m}</p>`; }
+  function add(n){ for(let i=0;i<n;i++) episode(); render(); const last=ret.slice(-10); const avg=last.reduce((a,b)=>a+b,0)/last.length;
+    info(`최근 10판 평균 보상 ≈ <b>${VZ.fmt(avg,2)}</b>. ${eps>=80?'거의 최적 정책을 배웠어요!':'더 학습하면 화살표가 또렷해져요.'}`); }
+  document.getElementById('e10').onclick=()=>add(10);
+  document.getElementById('e100').onclick=()=>add(100);
+  document.getElementById('reset1').onclick=reset;
+  reset();
+})();
+
+// ---------- STEP 2 : Cliff Walking ----------
+(function(){
+  const R=4,C=8, start=[3,0], goalC=7;
+  const env={rows:R, cols:C, goal:[3,goalC], pit:[[3,1],[3,2],[3,3],[3,4],[3,5],[3,6]]};
+  const isCliff=(r,c)=>r===3 && c>=1 && c<=6;
+  const K=(r,c)=>r+','+c;
+  function step(r,c,a){ let nr=r+RL.ACT[a].dr, nc=c+RL.ACT[a].dc;
+    if(nr<0||nc<0||nr>=R||nc>=C){nr=r;nc=c;}
+    if(isCliff(nr,nc)) return {s:start.slice(), rw:-100, done:false};
+    const goal=(nr===3&&nc===goalC);
+    return {s:[nr,nc], rw: goal?0:-1, done:goal};
+  }
+  function train(kind, EP){
+    const Q={}; for(let r=0;r<R;r++)for(let c=0;c<C;c++)Q[K(r,c)]=[0,0,0,0];
+    const eps=0.1, alpha=0.5, gamma=1;
+    const pick=(r,c)=> Math.random()<eps?Math.floor(Math.random()*4):argmaxTie(Q[K(r,c)]);
+    let online=0;
+    for(let e=0;e<EP;e++){ let [r,c]=start, a=pick(r,c), steps=0, epR=0;
+      while(steps<300){ const {s,rw,done}=step(r,c,a); const [nr,nc]=s; epR+=rw;
+        if(kind==='q'){ const tgt=rw+(done?0:gamma*Math.max(...Q[K(nr,nc)])); Q[K(r,c)][a]+=alpha*(tgt-Q[K(r,c)][a]); r=nr;c=nc;a=pick(r,c); }
+        else { const na=pick(nr,nc); const tgt=rw+(done?0:gamma*Q[K(nr,nc)][na]); Q[K(r,c)][a]+=alpha*(tgt-Q[K(r,c)][a]); r=nr;c=nc;a=na; }
+        steps++; if(done) break; }
+      online+=epR;
+    }
+    return {Q, online:online/EP};
+  }
+  // Q 내림차순으로 '이동 가능한(벽·이미 방문 아닌) 최선 행동'을 따라가 경로 추출 (정지/진동 방지)
+  function greedyPath(Q){ let [r,c]=start; const seen=new Set([K(r,c)]), path=[[r,c]]; let g=0;
+    while(!(r===3&&c===goalC) && g<40){
+      const order=[0,1,2,3].slice().sort((x,y)=>Q[K(r,c)][y]-Q[K(r,c)][x]); let moved=false;
+      for(const a of order){ const nr=r+RL.ACT[a].dr, nc=c+RL.ACT[a].dc;
+        if(nr<0||nc<0||nr>=R||nc>=C) continue;
+        if(isCliff(nr,nc)){ path.push([nr,nc]); return path; }
+        if(seen.has(K(nr,nc))) continue;
+        r=nr;c=nc; seen.add(K(r,c)); path.push([r,c]); moved=true; break; }
+      if(!moved) break; g++;
+    }
+    return path; }
+  function draw(elId, Q){
+    document.getElementById(elId).innerHTML = RL.gridSVG(env,{cell:46, trail:greedyPath(Q), agent:start,
+      agentEmoji:'🏁', pitEmoji:'🔥', pitTitle:'벼랑 (−100, 시작으로 복귀)'});
+  }
+  function run(){
+    document.getElementById('cliffStat').textContent='학습 중…';
+    setTimeout(()=>{
+      const q=train('q',2000), s=train('sarsa',2000);
+      draw('gwQ', q.Q); draw('gwS', s.Q);
+      document.getElementById('cliffStat').textContent='';
+      document.getElementById('cliffInfo').innerHTML =
+        `<div class="ttl">학습 중 평균 보상 — Q-learning ${VZ.fmt(q.online,0)} · SARSA ${VZ.fmt(s.online,0)} <span style="color:var(--faint);font-weight:400">(매 학습마다 조금씩 달라져요)</span></div>
+         <p style="margin:0">SARSA의 학습 중 보상이 <b>대체로 더 높아요</b>(벼랑에 덜 빠짐 — 안전길을 가니까). Q-learning의 최종 경로는 2칸 더 짧고 <b>이론적 최적</b>이지만, 벼랑에 바짝 붙어 탐험 중 <b>추락 위험</b>이 커요. "최적이냐 vs 안전이냐"의 맞바꿈.</p>`;
+    }, 20);
+  }
+  function drawEmpty(){ ['gwQ','gwS'].forEach(id=> document.getElementById(id).innerHTML =
+    RL.gridSVG(env,{cell:46, agent:start, agentEmoji:'🏁', pitEmoji:'🔥', pitTitle:'벼랑 (−100, 시작으로 복귀)'}));
+    document.getElementById('cliffInfo').innerHTML='<div class="ttl" style="color:var(--v)">▶ 학습을 눌러 두 알고리즘이 배우는 길을 비교하세요.</div>'; }
+  document.getElementById('trainCliff').onclick=run;
+  drawEmpty();
+})();
+</script>
+</body>
+</html>

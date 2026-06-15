@@ -366,8 +366,8 @@
       else if (pit) fill = 'color-mix(in srgb, var(--k) 38%, var(--panel-2))';
       else if (V) fill = valColor(V[r][c], vmax);
       cells += `<rect x="${x + 1}" y="${y + 1}" width="${cell - 2}" height="${cell - 2}" rx="7" fill="${fill}" stroke="var(--line)" stroke-width="1"/>`;
-      if (goal) overlay += `<text x="${x + cell / 2}" y="${y + cell / 2 + 8}" text-anchor="middle" font-size="22"><title>목표 (+1)</title>⭐</text>`;
-      else if (pit) overlay += `<text x="${x + cell / 2}" y="${y + cell / 2 + 8}" text-anchor="middle" font-size="22"><title>함정 (−1)</title>🕳️</text>`;
+      if (goal) overlay += `<text x="${x + cell / 2}" y="${y + cell / 2 + 8}" text-anchor="middle" font-size="22"><title>${opts.goalTitle || '목표 (+1)'}</title>${opts.goalEmoji || '⭐'}</text>`;
+      else if (pit) overlay += `<text x="${x + cell / 2}" y="${y + cell / 2 + 8}" text-anchor="middle" font-size="22"><title>${opts.pitTitle || '함정 (−1)'}</title>${opts.pitEmoji || '🕳️'}</text>`;
       else if (!wall) {
         if (opts.showVals && V) overlay += `<text x="${x + cell / 2}" y="${y + 13}" text-anchor="middle" fill="var(--muted)" font-size="9" font-family="JetBrains Mono">${VZ.fmt(V[r][c], 2)}</text>`;
         if (policy && policy[r][c] != null) {
