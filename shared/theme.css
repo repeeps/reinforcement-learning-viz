@@ -81,8 +81,9 @@ b.h{color:var(--hot);}
 .callout.q{background:rgba(55,189,248,.06); border-color:rgba(55,189,248,.25);}
 .callout.v{background:rgba(192,132,252,.06); border-color:rgba(192,132,252,.25);}
 .callout.good{background:rgba(52,211,153,.06); border-color:rgba(52,211,153,.25);}
+.callout.k{background:rgba(251,113,133,.06); border-color:rgba(251,113,133,.25);}
 .callout .ttl{font-weight:800; font-size:16px; margin-bottom:8px;}
-.callout.q .ttl{color:var(--q);} .callout.v .ttl{color:var(--v);} .callout.good .ttl{color:var(--good);}
+.callout.q .ttl{color:var(--q);} .callout.v .ttl{color:var(--v);} .callout.good .ttl{color:var(--good);} .callout.k .ttl{color:var(--k);}
 .callout p{margin:0 0 10px; font-size:14px;} .callout p:last-child{margin-bottom:0;}
 .callout code{font-family:'JetBrains Mono',monospace; color:var(--q); font-size:13px;}
 .formula{font-family:'JetBrains Mono',monospace; font-size:14px; color:var(--ink); text-align:center;
