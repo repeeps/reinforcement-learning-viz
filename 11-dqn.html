@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>11 함수근사 & DQN · 강화학습, 눈으로 보기</title>
+<link rel="stylesheet" href="shared/theme.css">
+<style>
+  .legend{font-size:12px; color:var(--faint); line-height:1.7; font-family:'JetBrains Mono',monospace;}
+  .dqn{display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:center; margin:10px 0;}
+  .dqn .box{background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:12px 14px; text-align:center; font-size:13px;}
+  .dqn .arr{color:var(--faint); font-size:20px;}
+  .trick{background:var(--panel-2); border:1px solid var(--line); border-radius:14px; padding:14px; margin-top:10px;}
+  .trick h4{margin:0 0 6px; font-size:14px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topnav" id="topnav"></div>
+
+  <header>
+    <div class="tag">PART 4 · Chapter 11</div>
+    <h1>함수근사 & DQN — 테이블을 신경망으로</h1>
+    <p class="intro">Q-테이블은 상태마다 칸이 하나씩 필요해요. 그런데 바둑의 상태는 우주의 원자보다 많고, 아타리 게임은 화면 픽셀이 상태예요 — <b>테이블이 불가능</b>하죠. 해법: 가치를 <b>함수</b>로 근사해, 안 가본 상태도 "비슷한 상태"로부터 <b>추측</b>하는 거예요. 그 함수를 신경망으로 둔 게 <b>DQN</b>, 딥러닝과 RL이 만나는 지점이에요.</p>
+  </header>
+
+  <nav class="stepper" id="stepper">
+    <button data-s="0" class="active">00 · 테이블의 한계</button>
+    <button data-s="1">01 · 함수로 일반화</button>
+    <button data-s="2">02 · DQN의 비결</button>
+    <button data-s="3">03 · 정리</button>
+  </nav>
+
+  <!-- STEP 0 -->
+  <section class="panel show" data-panel="0">
+    <span class="kicker" style="color:var(--hot)">Step 00 — Tables Don't Scale</span>
+    <h2>상태가 너무 많으면 표를 못 만든다</h2>
+    <p class="lead">표 기반 학습은 상태가 적을 때만 통해요. 상태 수가 폭발하면?</p>
+    <div class="grid3" id="scaleCards"></div>
+    <div class="callout" style="margin-top:16px">
+      <p style="margin:0"><b style="color:var(--good)">핵심 통찰</b>: 비슷한 상태는 <b>비슷한 가치</b>를 가져요(화면이 한 픽셀 다르다고 가치가 확 변하진 않죠). 그러니 모든 상태를 따로 외우지 말고, <b>"상태 → 가치"를 잇는 함수 하나</b>를 배우면 — 안 가본 상태도 추측할 수 있어요. 이게 <b>함수근사</b>.</p>
+    </div>
+    <p class="note" style="margin-top:14px">→ 표는 "각 상태를 통째로 암기", 함수근사는 "패턴을 배워 일반화". 적은 경험으로 넓은 상태를 커버하죠.</p>
+  </section>
+
+  <!-- STEP 1 -->
+  <section class="panel" data-panel="1">
+    <span class="kicker" style="color:var(--q)">Step 01 — Generalize with a Function</span>
+    <h2>몇 개 점만 보고, 사이를 채운다</h2>
+    <p class="lead">상태(가로축)의 진짜 가치(<span style="color:var(--faint)">회색 곡선</span>)를 우리는 몰라요. 일부 상태에서 <b>표본(점)</b>만 관측하죠. <b>함수</b>(주황)는 그 점들에 맞춰지며 <b>안 가본 상태의 가치까지 추측</b>해요. 표본 수와 함수의 유연함(차수)을 바꿔보세요.</p>
+    <div class="ctrl"><label>표본 수</label><input type="range" id="ns" min="4" max="20" value="8"><span class="val" id="nsv">8</span></div>
+    <div class="ctrl"><label>함수 유연함</label><input type="range" id="deg" min="1" max="7" value="3"><span class="val" id="degv">3</span></div>
+    <div class="chart-wrap" id="fit"></div>
+    <div class="legend" style="margin-top:8px"><span style="color:var(--faint)">— 진짜 가치(모름)</span> · <span style="color:var(--q)">● 관측 표본</span> · <span style="color:var(--hot)">— 학습된 함수(일반화)</span></div>
+    <div class="callout q" style="margin-top:12px" id="fitInfo"></div>
+    <p class="note" style="margin-top:12px">→ 너무 <b>뻣뻣하면</b>(차수 낮음) 곡선을 못 따라가고(과소적합), 너무 <b>유연하면</b>(차수 높음) 표본 잡음에 춤춰요(과적합). 적당한 유연함이 가장 잘 일반화해요 — 딥러닝의 핵심 고민이기도 하죠.</p>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="panel" data-panel="2">
+    <span class="kicker" style="color:var(--v)">Step 02 — DQN's Tricks</span>
+    <h2>Q-테이블 → 신경망, 그리고 두 가지 안정화 비결</h2>
+    <p class="lead"><b>DQN</b>은 Q(s,a)를 <b>신경망</b>으로 둬요: 상태(예: 게임 화면)를 넣으면 각 행동의 Q를 출력. Q-learning의 갱신을 신경망 학습으로 바꾸는 거죠. 그런데 그냥 하면 <b>불안정</b>해서, 두 가지 트릭이 핵심이에요.</p>
+    <div class="dqn">
+      <div class="box">상태 s<br><span style="color:var(--faint)">(게임 화면)</span></div>
+      <div class="arr">→</div>
+      <div class="box" style="border-color:var(--q)">신경망<br>Q(s,·)</div>
+      <div class="arr">→</div>
+      <div class="box">Q(s,↑) Q(s,↓)<br>Q(s,←) Q(s,→)</div>
+    </div>
+    <div class="trick"><h4 style="color:var(--hot)">① 경험 리플레이 (Experience Replay)</h4>
+      <p class="note" style="margin:0">연속된 경험은 서로 <b>너무 닮아</b>(직전 화면과 지금 화면이 비슷) 그대로 학습하면 편향돼요. 그래서 경험을 <b>저장해뒀다 무작위로 섞어</b> 꺼내 학습해요 — 한 주제만 반복 암기하는 대신 골고루 복습하듯이.</p></div>
+    <div class="trick"><h4 style="color:var(--q)">② 타깃 네트워크 (Target Network)</h4>
+      <p class="note" style="margin:0">학습 목표(r+γ·maxQ)도 같은 신경망에서 나오면, 목표가 <b>계속 움직여</b> 쫓다 발산해요. 그래서 목표 계산용 신경망을 <b>잠시 고정</b>했다 가끔만 갱신해요 — 움직이는 과녁을 잠깐 멈춰두고 조준하듯이.</p></div>
+    <p class="note" style="margin-top:14px">→ 이 둘 덕에 DQN은 아타리 게임 화면(픽셀)만 보고 사람 수준으로 플레이하는 걸 처음으로 해냈어요(2015년경). 딥러닝(인식)과 RL(의사결정)의 결합이죠.</p>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="panel" data-panel="3">
+    <span class="kicker" style="color:var(--good)">Step 03 — Recap</span>
+    <h2>딥강화학습의 시작</h2>
+    <div class="twocol" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="callout q"><div class="ttl">표 기반 (앞 장들)</div><p style="margin:0">상태마다 칸 하나. 정확하지만 상태가 많으면 <b>불가능</b>. 일반화 없음.</p></div>
+      <div class="callout good"><div class="ttl">함수근사 (DQN)</div><p style="margin:0">상태→가치를 <b>함수(신경망)</b>로. 거대한·연속 상태 가능, <b>일반화</b>. 대신 불안정해 트릭 필요.</p></div>
+    </div>
+    <div class="callout" style="margin-top:14px">
+      <p style="margin:0"><b style="color:var(--hot)">딥러닝과의 만남</b>: 신경망이 <b>인식</b>(화면→특징)을, 강화학습이 <b>의사결정</b>(특징→행동)을 맡아요. 함수근사가 그 둘을 잇는 다리예요. 우리 <b>딥러닝 트랙</b>의 신경망·역전파가 바로 여기서 Q를 학습하는 데 쓰여요.</p>
+    </div>
+    <p class="note" style="margin-top:16px">→ DQN은 <b>가치(Q)</b>를 근사했어요. 그런데 정책을 <b>직접</b> 근사·학습할 수도 있어요. 다음 <b>12장 정책경사</b>예요.</p>
+  </section>
+
+  <p class="foot">// 수식 없는 직관 입문 · 함수 적합은 브라우저에서 실시간 최소제곱 계산 · <a href="index.html">목차</a></p>
+</div>
+
+<script src="shared/lib.js"></script>
+<script>
+VZ.mountTopnav('#topnav', 'CH 11 · DQN');
+VZ.setupStepper();
+
+// ---------- STEP 0 : 규모 카드 ----------
+(function(){
+  const C=[
+    ['🎲','격자월드','16칸 → 표 OK','var(--good)'],
+    ['🕹️','아타리 게임','화면 픽셀 → 사실상 무한','var(--hot)'],
+    ['⚫','바둑','약 10¹⁷⁰ 상태 → 우주 원자보다 많음','var(--k)'],
+  ];
+  document.getElementById('scaleCards').innerHTML = C.map(c=>
+    `<div class="card"><div style="font-size:26px">${c[0]}</div><h4 style="margin:8px 0 4px">${c[1]}</h4>
+      <div class="note" style="color:${c[3]}">${c[2]}</div></div>`).join('');
+})();
+
+// ---------- STEP 1 : 함수근사(최소제곱 다항) ----------
+(function(){
+  const X0=0, X1=3;
+  const trueV=x=> 0.5 + 0.38*Math.sin(2.1*x+0.4);   // 진짜 가치(미지)
+  let ns=8, deg=3;
+  // 표본 x는 결정적(재현성): 균등 + 약간의 결정적 흔들림(의사잡음)
+  function samples(){ const pts=[]; for(let i=0;i<ns;i++){ const x=X0+(X1-X0)*(i+0.5)/ns;
+    const noise=0.11*Math.sin(i*12.9898)*Math.cos(i*4.1414); pts.push([x, trueV(x)+noise]); } return pts; }
+  function solve(A,b){ const n=b.length, M=A.map((r,i)=>[...r,b[i]]);
+    for(let col=0;col<n;col++){ let piv=col; for(let r=col+1;r<n;r++) if(Math.abs(M[r][col])>Math.abs(M[piv][col])) piv=r;
+      [M[col],M[piv]]=[M[piv],M[col]]; const d=M[col][col]||1e-12;
+      for(let r=0;r<n;r++){ if(r===col)continue; const f=M[r][col]/d; for(let k=col;k<=n;k++) M[r][k]-=f*M[col][k]; } }
+    return M.map((r,i)=>r[n]/(M[i][i]||1e-12)); }
+  function polyfit(pts, d){ const n=d+1; const AtA=Array.from({length:n},()=>Array(n).fill(0)), Aty=Array(n).fill(0);
+    pts.forEach(([x,y])=>{ const p=[]; let xp=1; for(let k=0;k<n;k++){p.push(xp);xp*=x;}
+      for(let a=0;a<n;a++){ Aty[a]+=p[a]*y; for(let b=0;b<n;b++) AtA[a][b]+=p[a]*p[b]; } });
+    for(let k=0;k<n;k++) AtA[k][k]+=1e-8;
+    const w=solve(AtA,Aty); return x=>{ let s=0,xp=1; for(let k=0;k<n;k++){s+=w[k]*xp;xp*=x;} return s; }; }
+  function render(){
+    const pts=samples(), f=polyfit(pts, deg);
+    const W=560,H=270,padL=34,padR=14,padT=14,padB=30;
+    const xr=[X0,X1], yr=[-0.4,1.5];
+    const px=x=>padL+(x-xr[0])/(xr[1]-xr[0])*(W-padL-padR);
+    const py=y=>H-padB-(y-yr[0])/(yr[1]-yr[0])*(H-padT-padB);
+    const curve=(fn,col,dash)=>{ let d=''; for(let i=0;i<=120;i++){ const x=xr[0]+(xr[1]-xr[0])*i/120; d+=(i?'L':'M')+px(x).toFixed(1)+','+py(Math.max(-0.55,Math.min(1.65,fn(x)))).toFixed(1); }
+      return `<path d="${d}" fill="none" stroke="${col}" stroke-width="2.5" ${dash?`stroke-dasharray="${dash}"`:''}/>`; };
+    // y 눈금 0·1, 0선, 축 라벨
+    let g='';
+    [0,1].forEach(yv=>{ g+=`<line x1="${padL}" y1="${py(yv)}" x2="${W-padR}" y2="${py(yv)}" stroke="var(--line)" ${yv?'stroke-dasharray="3 4"':''}/>`;
+      g+=`<text x="${padL-6}" y="${py(yv)+3}" text-anchor="end" fill="var(--muted)" font-size="10" font-family="JetBrains Mono">${yv}</text>`; });
+    g+=`<text x="${padL-6}" y="${padT+6}" text-anchor="end" fill="var(--muted)" font-size="10">가치↑</text>`;
+    g+=`<text x="${W-padR}" y="${H-6}" text-anchor="end" fill="var(--muted)" font-size="10" font-family="JetBrains Mono">상태 →</text>`;
+    g+=curve(trueV,'var(--faint)','5 4');
+    g+=curve(f,'var(--hot)');
+    pts.forEach(([x,y])=> g+=`<circle cx="${px(x).toFixed(1)}" cy="${py(y).toFixed(1)}" r="4" fill="var(--q)"/>`);
+    document.getElementById('fit').innerHTML=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="함수근사 적합" style="max-width:100%;display:block">${g}</svg>`;
+    // 일반화 오차(표본 아닌 곳에서 진짜와의 차이)
+    let err=0,m=0; for(let i=0;i<=40;i++){ const x=X0+(X1-X0)*i/40; err+=Math.abs(f(x)-trueV(x)); m++; }
+    err/=m;
+    document.getElementById('fitInfo').innerHTML =
+      `<div class="ttl" style="color:var(--q)">표본 ${ns}개 · 함수 차수 ${deg} · 일반화 오차 ≈ ${VZ.fmt(err,3)}</div>
+       <p style="margin:0">${deg<=2?'너무 뻣뻣해 곡선을 못 따라가요(과소적합).':deg>=6?'너무 유연해 표본 잡음까지 따라 춤춰요(과적합) — 안 가본 곳에서 엉뚱하게 치솟죠.':'곡선을 잘 따라가며 안 가본 상태도 잘 추측해요.'}</p>`;
+  }
+  document.getElementById('ns').oninput=e=>{ ns=+e.target.value; document.getElementById('nsv').textContent=ns; render(); };
+  document.getElementById('deg').oninput=e=>{ deg=+e.target.value; document.getElementById('degv').textContent=deg; render(); };
+  render();
+})();
+</script>
+</body>
+</html>
