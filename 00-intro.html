@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>00 시작하기 — 왜 강화학습인가 · 강화학습, 눈으로 보기</title>
+<link rel="stylesheet" href="shared/theme.css">
+<style>
+  .use-card{cursor:pointer; user-select:none;}
+  .use-card .reveal{display:none; margin-top:10px; font-size:13px; color:var(--muted); line-height:1.6;}
+  .use-card.open .reveal{display:block;}
+  .use-card.open{border-color:var(--q);}
+  .use-card.open .clickhint{display:none;}
+  .use-emoji{font-size:30px; line-height:1;}
+  .maprow{display:flex; align-items:center; gap:10px; padding:10px 0; text-decoration:none;}
+  .mapnum{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--accent,var(--q)); font-weight:700; min-width:64px;}
+  .maparrow{text-align:center; color:var(--faint); font-size:16px; margin:-2px 0;}
+  .machines{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:6px 0 4px;}
+  @media(max-width:560px){ .machines{grid-template-columns:1fr;} }
+  .slot{background:var(--panel-2); border:1px solid var(--line); border-radius:14px; padding:14px; text-align:center;}
+  .slot .face{font-size:34px; line-height:1;}
+  .slot .nm{font-weight:800; margin:6px 0 2px;}
+  .slot .est{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted);}
+  .slot button{margin-top:10px; width:100%;}
+  .gridwrap{display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;}
+  .legend{font-size:12px; color:var(--faint); line-height:1.8; font-family:'JetBrains Mono',monospace;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topnav" id="topnav"></div>
+
+  <header>
+    <div class="tag">START HERE · Chapter 00</div>
+    <h1>왜 강화학습인가 — 보상으로 스스로 배우는 법</h1>
+    <p class="intro">바둑으로 사람을 이기고, 로봇이 걷는 법을 익히고, ChatGPT가 더 도움 되게 다듬어진 비결엔 공통점이 있어요 — <b>정답을 알려주지 않고, 잘하면 점수(보상)만 주는</b> 방식이죠. 누가 가르치지 않아도 <b>시행착오</b>로 좋은 행동을 찾아내는 것, 이게 <b>강화학습(RL)</b> 입니다. 먼저 왜·무엇을 배우는지 직접 돌려보며 둘러봐요.</p>
+  </header>
+
+  <nav class="stepper" id="stepper">
+    <button data-s="0" class="active">00 · 어디에나</button>
+    <button data-s="1">01 · 보상으로 배운다</button>
+    <button data-s="2">02 · 탐험 vs 활용</button>
+    <button data-s="3">03 · 코스 지도</button>
+  </nav>
+
+  <!-- STEP 0 -->
+  <section class="panel show" data-panel="0">
+    <span class="kicker" style="color:var(--hot)">Step 00 — It's Everywhere</span>
+    <h2>"해보고 배우는" 기계는 이미 곳곳에</h2>
+    <p class="lead">사람이 규칙을 일일이 못 짜는 문제 — 바둑·로봇·자율주행처럼 경우의 수가 어마어마한 곳에서 RL이 빛나요. 카드를 눌러 확인해 보세요.</p>
+    <div class="grid3" id="useCards"></div>
+    <p class="note" style="margin-top:16px">→ 공통점: <b>"정답표는 없고, 결과로 점수만 주어진다."</b> 그 점수(보상)를 최대로 모으려고 <b>시행착오</b>하며 좋은 행동을 찾는 게 강화학습이에요. 지도학습(정답 맞히기)과 가장 다른 점이죠.</p>
+  </section>
+
+  <!-- STEP 1 -->
+  <section class="panel" data-panel="1">
+    <span class="kicker" style="color:var(--q)">Step 01 — Learning from Reward</span>
+    <h2>보상만 주면, 길을 스스로 찾는다</h2>
+    <p class="lead">로봇(🤖)이 <b>⭐ 목표</b>에 닿으면 <b>+1</b>, <b>🕳️ 함정</b>에 빠지면 <b>−1</b>, 한 걸음마다 <b>−0.04</b>(꾸물대면 손해 · 미래 보상은 살짝 깎아 더해요 — '할인', 4장). 처음엔 아무것도 몰라 헤매지만, <b>한 걸음 옮길 때마다 바로</b> 가치를 조금씩 갱신하며(나중에 배울 'TD 학습') 에피소드를 거듭하면 <b>각 칸의 가치</b>와 <b>화살표 정책</b>이 또렷해져요. "에피소드 ▶"를 눌러보세요.</p>
+    <div class="gridwrap">
+      <div>
+        <div id="gw"></div>
+        <div class="legend" style="margin-top:8px">⭐ 목표 +1 · 🕳️ 함정 −1 · 칸 색 = 그 자리서 앞으로 받을 <b style="color:var(--ink)">보상 합의 예상(가치)</b>, 초록↑·빨강↓ · <span style="color:var(--hot)">→ 가치가 가장 높은 방향(정책)</span></div>
+      </div>
+      <div style="flex:1;min-width:220px">
+        <div class="row" style="gap:8px;margin-bottom:10px">
+          <button class="btn" id="ep1">▶ 에피소드 1회</button>
+          <button class="btn" id="ep20">▶▶ 20회</button>
+          <button class="btn" id="epReset" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">↺ 리셋</button>
+        </div>
+        <div id="gwInfo" class="callout q"></div>
+        <p class="note" style="margin-top:10px">→ 정답 경로를 알려준 적이 없어요 — <b>목표·함정에 점수를 주는 규칙</b>만 정했을 뿐이죠. 그런데도 보상과 반복만으로 "좋은 칸→좋은 칸"을 잇는 길이 드러납니다. 이 과정을 PART 2~3에서 제대로 분해해요.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="panel" data-panel="2">
+    <span class="kicker" style="color:var(--v)">Step 02 — Explore vs Exploit</span>
+    <h2>아는 것만 쓸까, 새로 찾아볼까</h2>
+    <p class="lead">세 슬롯머신의 당첨 확률은 <b>숨겨져</b> 있어요. 지금까지 제일 좋아 보이는 것만 당기면(<b>활용</b>) 더 좋은 기계를 영영 못 찾을 수 있고, 가끔 다른 걸 시도하면(<b>탐험</b>) 손해 같지만 진짜 대박을 발견하죠. 직접 당겨보세요.</p>
+    <div class="machines" id="slots"></div>
+    <div class="row" style="gap:8px;margin:8px 0">
+      <button class="btn" id="slotReset" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">↺ 리셋</button>
+      <span class="note" id="slotInfo"></span>
+    </div>
+    <div class="callout v" style="margin-top:8px">
+      <div class="ttl">탐험은 정말 이득일까? — 100번 당기기, 300판 평균</div>
+      <p style="margin:0 0 10px">"항상 최고만(순수 활용)" vs "가끔 탐험(ε-greedy)"을 같은 조건에서 시뮬레이션했어요.</p>
+      <div id="cmpBars"></div>
+      <button class="btn" id="cmpRun" style="margin-top:10px">🎲 다시 시뮬레이션</button>
+    </div>
+    <p class="note" style="margin-top:12px">→ 대개 가끔의 탐험이 장기 평균 보상을 높여요. 이 "탐험 vs 활용" 딜레마가 강화학습의 심장이고, <b>2장 멀티암드 밴딧</b>에서 본격적으로 다뤄요.</p>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="panel" data-panel="3">
+    <span class="kicker" style="color:var(--good)">Step 03 — Your Learning Map</span>
+    <h2>이 코스에서 배울 것 — 그리고 왜 이 순서인지</h2>
+    <p class="lead">먼저 <b>RL의 기본 틀</b>(밴딧·MDP·할인율)을 세우고, <b>가치를 푸는 법</b>(벨만·동적계획법)을 익혀요. 그다음 모델 없이 <b>경험으로 배우는 법</b>(몬테카를로·TD·Q-learning)으로 가고, <b>딥강화학습</b>(DQN·정책경사)으로 확장한 뒤, 마지막에 <b>큰 그림</b>으로 다른 분야와 잇습니다.</p>
+    <div id="courseMap"></div>
+    <p class="note" style="margin-top:16px">→ 준비됐다면 <a href="01-what-is-rl.html" style="color:var(--q);font-weight:700">CH 01 · 강화학습이란</a>부터 시작하세요.</p>
+  </section>
+
+  <p class="foot">// 수식 없는 입문 챕터 · 직관 먼저, 자세한 동작은 다음 챕터부터 · <a href="index.html">목차</a></p>
+</div>
+
+<script src="shared/lib.js"></script>
+<script>
+VZ.mountTopnav('#topnav', '00 · Intro');
+VZ.setupStepper();
+const RL = VZ.RL;
+
+// ---------- STEP 0 : 어디에나 ----------
+(function(){
+  const USES = [
+    ['🎮','게임 정복 (바둑·아타리)','경우의 수가 우주의 원자보다 많은 바둑도, RL 에이전트가 스스로 둬보며 사람을 넘어섰어요. 규칙만 주고 점수로 학습.'],
+    ['🦾','로봇 걷기·잡기','넘어지면 감점, 나아가면 가점. 시뮬레이션에서 수백만 번 시행착오하며 걷고 물건 집는 법을 익혀요.'],
+    ['🚗','자율주행 · 드론','차선 유지·충돌 회피처럼 "상황에 맞는 연속 결정"을 보상으로 다듬어요. 모든 경우를 손으로 못 짜니까요.'],
+    ['💬','ChatGPT 다듬기 (RLHF)','사람 피드백으로 "좋은 답에 점수 매기는" 보상 모델을 먼저 만들고, 그 점수를 보상 삼아 RL로 답변을 미세조정해요. LLM을 "도움 되게" 정렬하는 핵심 단계.'],
+    ['📈','추천 · 트레이딩','클릭·수익을 보상 삼아 장기적으로 더 나은 추천/주문 전략을 학습. 즉각 보상과 미래 보상의 균형이 핵심.'],
+    ['🐕','강아지 훈련 (직관)','잘하면 간식(양수 보상), 잘못하면 꾸중(음수 보상). 정답을 말로 못 알려줘도 보상·벌만으로 행동이 바뀌는 게 강화학습의 원형.'],
+  ];
+  document.getElementById('useCards').innerHTML = USES.map((u,i)=>
+    `<div class="card use-card">
+       <div class="use-emoji">${u[0]}</div>
+       <h4 style="margin:8px 0 0">${u[1]}</h4>
+       <div class="reveal">${u[2]}</div>
+       <div class="note clickhint" style="margin-top:8px;font-size:11px;color:var(--faint)">클릭해서 보기 ▾</div>
+     </div>`).join('');
+  document.getElementById('useCards').addEventListener('click', e=>{
+    const c=e.target.closest('.use-card'); if(!c) return; c.classList.toggle('open');
+  });
+})();
+
+// ---------- STEP 1 : 그리드월드 Q-learning ----------
+(function(){
+  const env = {
+    rows:4, cols:5,
+    walls:['1,2','2,2'],
+    goal:[0,4], pit:[1,4], start:[3,0],
+  };
+  const A = RL.ACT.length;
+  let Q, episodes, lastSteps, lastReturn, busy=false, eps=0.3, cancelAnim=null;
+  const alpha=0.5, gamma=0.9;
+
+  function reset(){
+    if(cancelAnim){ cancelAnim(); cancelAnim=null; }   // 진행 중 애니 취소(리셋은 항상 동작)
+    busy=false;
+    Q = {};
+    for(let r=0;r<env.rows;r++)for(let c=0;c<env.cols;c++) Q[RL.keyOf(r,c)] = [0,0,0,0];
+    episodes=0; lastSteps=0; lastReturn=0; eps=0.3;
+    render(null, env.start);
+    info('아직 학습 전 — 가치가 모두 0이에요. "에피소드 ▶"를 눌러 보상으로 채워보세요.');
+  }
+  function reward(r,c){
+    if(RL.isGoal(env,r,c)) return 1;
+    if(RL.isPit(env,r,c)) return -1;
+    return -0.04;
+  }
+  // ε-greedy 행동 선택 (모듈 스코프 eps 공유)
+  function pick(r,c){
+    if(Math.random()<eps) return Math.floor(Math.random()*A);
+    return RL.argmax(Q[RL.keyOf(r,c)]);
+  }
+  // 한 에피소드 실행 → {trail, steps, ret}. 끝나면 탐험률 eps 감쇠(1회·20회 버튼 공유).
+  function runEpisode(){
+    let [r,c]=env.start, steps=0, ret=0; const trail=[[r,c]];
+    while(!RL.isTerminal(env,r,c) && steps<60){
+      const a=pick(r,c);
+      const [nr,nc]=RL.stepState(env,r,c,a);
+      const rew=reward(nr,nc); ret+=rew;
+      const target = rew + (RL.isTerminal(env,nr,nc)?0:gamma*Math.max(...Q[RL.keyOf(nr,nc)]));
+      const q=Q[RL.keyOf(r,c)]; q[a] += alpha*(target - q[a]);
+      r=nr; c=nc; steps++; trail.push([r,c]);
+    }
+    episodes++; lastSteps=steps; lastReturn=ret;
+    eps=Math.max(0.05, eps*0.95);
+    return {trail, steps, ret};
+  }
+  // 가치맵(V=max Q)과 정책(argmax) 산출
+  function policyAndV(){
+    const V=[], P=[];
+    for(let r=0;r<env.rows;r++){ V.push([]); P.push([]);
+      for(let c=0;c<env.cols;c++){
+        if(RL.isWall(env,r,c)||RL.isTerminal(env,r,c)){ V[r].push(0); P[r].push(null); continue; }
+        const q=Q[RL.keyOf(r,c)];
+        V[r].push(Math.max(...q));
+        P[r].push(RL.argmax(q));
+      }
+    }
+    return {V,P};
+  }
+  function render(agent, agentAt, trail){
+    const {V,P}=policyAndV();
+    document.getElementById('gw').innerHTML = RL.gridSVG(env,{
+      cell:62, V, policy:(episodes>0?P:null), agent:agentAt||agent, trail
+    });
+  }
+  function info(msg){
+    document.getElementById('gwInfo').innerHTML =
+      `<div class="ttl" style="color:var(--q)">에피소드 ${episodes}회${episodes>0?` · 마지막 ${lastSteps}걸음 · 보상합 ${VZ.fmt(lastReturn,2)}`:''}</div><p style="margin:0">${msg}</p>`;
+  }
+  function playOne(){
+    if(busy) return; busy=true;
+    const {trail,steps,ret}=runEpisode();
+    // 자취를 따라 에이전트 이동 애니메이션 (cancelAnim으로 리셋 시 취소 가능)
+    cancelAnim = VZ.stepLight(trail, (pos,i)=>{
+      render(null, pos, trail.slice(0,i+1));
+      if(i===trail.length-1){
+        const reached = RL.isGoal(env,pos[0],pos[1]);
+        info(reached
+          ? `⭐ 목표 도달! ${steps}걸음, 받은 점수 합 ${VZ.fmt(ret,2)}(할인 전). 지나온 칸들의 가치가 갱신됐어요.`
+          : (RL.isPit(env,pos[0],pos[1]) ? `🕳️ 함정에 빠졌어요(−1). 이 근처 가치가 낮아집니다 — 다음엔 피하겠죠.` : `시간 초과 — 아직 길을 못 찾았어요. 계속 반복하면 좋아져요.`));
+        busy=false; cancelAnim=null;
+      }
+    }, Math.min(70, 700/trail.length));
+  }
+  function playMany(n){
+    if(busy) return; busy=true;
+    for(let k=0;k<n;k++) runEpisode();
+    render(null, env.start);
+    info(`${n}회 더 학습했어요(총 ${episodes}회). 가치 히트맵과 화살표 정책이 또렷해졌죠 — 목표로 향하는 길이 보입니다.`);
+    busy=false;
+  }
+  document.getElementById('ep1').onclick = ()=>playOne();
+  document.getElementById('ep20').onclick = ()=>playMany(20);
+  document.getElementById('epReset').onclick = ()=>reset();   // 애니 중에도 항상 동작
+  reset();
+})();
+
+// ---------- STEP 2 : 멀티암드 밴딧 ----------
+(function(){
+  const TRUE=[0.3,0.7,0.45];           // 숨겨진 당첨 확률 (B가 최고, 고정=stationary)
+  const FACE=['🎰','🎰','🎰'], NAME=['A','B','C'];
+  let pulls, wins, totalWins;
+
+  function reset(){
+    pulls=[0,0,0]; wins=[0,0,0]; totalWins=0;
+    renderSlots();
+    document.getElementById('slotInfo').innerHTML='기계를 당겨 추정 승률을 채워보세요. 진짜 확률은 숨겨져 있고, 이 데모에선 변하지 않아요(고정).';
+  }
+  function est(i){ return pulls[i]? wins[i]/pulls[i] : 0; }
+  function renderSlots(){
+    document.getElementById('slots').innerHTML = NAME.map((nm,i)=>
+      `<div class="slot">
+        <div class="face">${FACE[i]}</div>
+        <div class="nm">기계 ${nm}</div>
+        <div class="est">당김 ${pulls[i]}회 · 추정 ${pulls[i]?(est(i)*100).toFixed(0)+'%':'?'}</div>
+        <div style="margin-top:8px;height:10px;border-radius:6px;background:var(--panel);border:1px solid var(--line);overflow:hidden">
+          <div style="height:100%;width:${(est(i)*100).toFixed(0)}%;background:var(--v);transition:width .4s"></div>
+        </div>
+        <button class="btn" data-i="${i}">당기기</button>
+      </div>`).join('');
+    document.getElementById('slots').querySelectorAll('button').forEach(b=>{
+      b.onclick=()=>pull(+b.dataset.i);
+    });
+  }
+  function pull(i){
+    const win = Math.random()<TRUE[i];
+    pulls[i]++; if(win){ wins[i]++; totalWins++; }
+    renderSlots();
+    const totalPulls=pulls.reduce((a,b)=>a+b,0);
+    document.getElementById('slotInfo').innerHTML =
+      `기계 ${NAME[i]} → ${win?'<b style="color:var(--good)">당첨! +1</b>':'<span style="color:var(--k)">꽝</span>'} · 총 ${totalWins}/${totalPulls} 당첨`;
+  }
+  document.getElementById('slotReset').onclick=reset;
+
+  // 전략 비교 시뮬레이션
+  // 공정성: 두 전략 모두 처음 3턴은 각 기계를 한 번씩 워밍업한 뒤 —
+  //  greedy=그때 제일 좋아 보인 것만 계속, ε-greedy=10% 확률로 가끔 다른 것도 시도.
+  function simulate(strategy, N){
+    const w=[0,0,0], n=[0,0,0]; let score=0;
+    const est=i=> n[i]? w[i]/n[i] : 0;
+    for(let t=0;t<N;t++){
+      let i;
+      if(t<3) i=t;                                  // 워밍업: 각 기계 한 번씩
+      else if(strategy==='greedy') i=RL.argmax([est(0),est(1),est(2)]);
+      else i = Math.random()<0.1 ? Math.floor(Math.random()*3) : RL.argmax([est(0),est(1),est(2)]);
+      const win=Math.random()<TRUE[i]; n[i]++; if(win){w[i]++; score++;}
+    }
+    return score;
+  }
+  function runCompare(){
+    const TRIALS=300, N=100;
+    let g=0, e=0;
+    for(let t=0;t<TRIALS;t++){ g+=simulate('greedy',N); e+=simulate('eps',N); }
+    const gAvg=g/TRIALS, eAvg=e/TRIALS, max=Math.max(gAvg,eAvg,1);
+    const epsWins = eAvg>=gAvg;
+    document.getElementById('cmpBars').innerHTML =
+      VZ.barRow('항상 최고만', gAvg/max, {win:!epsWins, color:epsWins?'var(--slate)':null, pctText:VZ.fmt(gAvg,1)+'점'}) +
+      VZ.barRow('가끔 탐험', eAvg/max, {win:epsWins, color:epsWins?null:'var(--slate)', pctText:VZ.fmt(eAvg,1)+'점'}) +
+      `<div class="note" style="margin-top:8px">${epsWins
+        ? '→ 이번에도 <b>가끔 탐험</b>이 평균에서 앞섰어요. 한 판이 아니라 200판 평균이라는 점이 중요해요.'
+        : '→ 이번엔 우연히 <b>활용</b>이 근소하게 앞섰네요. 다시 돌려보면 보통 탐험이 이겨요 — 한 번의 운보다 평균이 핵심.'}</div>`;
+  }
+  document.getElementById('cmpRun').onclick=runCompare;
+
+  reset(); runCompare();
+})();
+
+// ---------- STEP 3 : 코스 지도 ----------
+(function(){
+  const MAP = [
+    ['CH 01~04','RL의 기본 틀','강화학습이란 → 멀티암드 밴딧(탐험·활용) → MDP(상태·행동·보상·정책) → 누적보상과 할인율.','01-what-is-rl.html','var(--q)'],
+    ['CH 05~07','가치를 푸는 법','가치함수 V·Q → 벨만 방정식("지금 보상+다음 가치") → 동적계획법(가치·정책 반복).','05-value-functions.html','var(--v)'],
+    ['CH 08~10','경험으로 배우기','몬테카를로(끝까지 가보고 평균) → 시간차 학습 TD(한 발짝 보고 갱신) → Q-learning·SARSA.','08-monte-carlo.html','var(--hot)'],
+    ['CH 11~13','딥강화학습','함수근사·DQN(Q-테이블→신경망, 딥러닝과 만나는 다리) → 정책경사 → Actor-Critic.','11-dqn.html','var(--good)'],
+    ['CH 14','큰 그림','RL은 어디에(게임·로봇·RLHF) + 행동설계(FSM·BT)와 언제 무엇을 쓸지 비교.','14-landscape.html','var(--pink)'],
+  ];
+  document.getElementById('courseMap').innerHTML = MAP.map((m,i)=>
+    `${i>0?'<div class="maparrow">↓</div>':''}
+     <a class="maprow" href="${m[3]}" style="--accent:${m[4]}">
+       <span class="mapnum">${m[0]}</span>
+       <span style="flex:1"><b style="color:var(--ink)">${m[1]}</b><div class="note" style="margin-top:2px">${m[2]}</div></span>
+       <span style="color:${m[4]};font-size:18px">→</span>
+     </a>`).join('');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>강화학습, 눈으로 보기 · 인터랙티브 시각화</title>
+<link rel="stylesheet" href="shared/theme.css">
+<style>
+  .hero{text-align:center; padding:30px 0 10px;}
+  .hero .tag{font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.25em; text-transform:uppercase; color:var(--q);}
+  .hero h1{font-size:clamp(30px,6vw,52px); font-weight:800; letter-spacing:-.03em; margin:14px 0 12px; line-height:1.05;
+    background:linear-gradient(100deg,#fff,#9bb6ff 55%,var(--v)); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .hero p{color:var(--muted); max-width:660px; margin:0 auto; font-size:16px;}
+  .seclabel{font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--muted); margin:46px 0 16px; padding-bottom:8px; border-bottom:1px solid var(--line);}
+  .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px;}
+  .ccard{display:block; text-decoration:none; background:var(--panel); border:1px solid var(--line); border-radius:18px;
+    padding:22px; transition:.22s; position:relative; overflow:hidden;}
+  .ccard::before{content:''; position:absolute; inset:0 auto 0 0; width:4px; background:var(--accent,var(--q)); opacity:.8;}
+  .ccard:hover{transform:translateY(-4px); border-color:var(--accent,var(--q)); box-shadow:0 14px 36px rgba(0,0,0,.35);}
+  .ccard .num{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--accent,var(--q)); font-weight:700;}
+  .ccard h3{margin:8px 0 8px; font-size:19px; color:var(--ink); letter-spacing:-.01em;}
+  .ccard p{margin:0; font-size:13.5px; color:var(--muted); line-height:1.6;}
+  .ccard .chips{margin-top:14px; display:flex; gap:6px; flex-wrap:wrap;}
+  .ccard .chip{font-family:'JetBrains Mono',monospace; font-size:10px; padding:3px 8px; border-radius:6px;
+    background:var(--panel-2); border:1px solid var(--line); color:var(--muted);}
+  .foot{margin-top:60px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="tag">Reinforcement Learning · Visualized · Interactive</div>
+    <h1>강화학습, 눈으로 보기</h1>
+    <p>밴딧부터 딥강화학습까지 — 에이전트가 <b style="color:var(--hot)">보상으로 스스로 배우는 과정</b>을 <b style="color:var(--hot)">그리드월드·가치 히트맵·실시간 학습</b>으로 직접 돌려보며 익히는 인터랙티브 학습 자료입니다.</p>
+  </div>
+
+  <a href="00-intro.html" style="display:block;text-decoration:none;margin:8px 0 4px;padding:18px 22px;border-radius:16px;
+     background:linear-gradient(100deg,rgba(251,191,36,.12),rgba(55,189,248,.08));border:1px solid var(--hot);transition:.2s">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--hot);font-weight:700">👋 처음이세요?</div>
+    <div style="font-size:18px;font-weight:800;color:var(--ink);margin:6px 0 4px">0번 — 왜 강화학습을 배우나 (수식 없는 5분 입문)</div>
+    <div style="font-size:13.5px;color:var(--muted)">보상으로 길을 찾는 그리드월드, 탐험 vs 활용 — 핵심 직관과 코스 전체 지도를 먼저 둘러보세요. →</div>
+  </a>
+
+  <div class="seclabel">PART 1 · RL의 기본 틀</div>
+  <div class="cards">
+    <a class="ccard" style="--accent:var(--hot)" href="01-what-is-rl.html">
+      <div class="num">01</div><h3>강화학습이란</h3>
+      <p>정답표 없이 보상으로 시행착오. 지도·비지도 학습과의 차이.</p>
+      <div class="chips"><span class="chip">reward</span><span class="chip">trial &amp; error</span></div>
+    </a>
+    <a class="ccard" style="--accent:var(--q)" href="02-bandit.html">
+      <div class="num">02</div><h3>멀티암드 밴딧</h3>
+      <p>슬롯머신으로 보는 탐험 vs 활용. ε-greedy의 균형 잡기.</p>
+      <div class="chips"><span class="chip">explore/exploit</span><span class="chip">ε-greedy</span></div>
+    </a>
+    <a class="ccard" style="--accent:var(--v)" href="03-mdp.html">
+      <div class="num">03</div><h3>MDP: 의사결정의 틀</h3>
+      <p>상태·행동·보상·정책·전이. 강화학습 문제를 정의하는 언어.</p>
+      <div class="chips"><span class="chip">state/action</span><span class="chip">policy</span></div>
+    </a>
+    <a class="ccard" style="--accent:var(--good)" href="04-return-discount.html">
+      <div class="num">04</div><h3>누적보상과 할인율</h3>
+      <p>미래 보상을 왜 깎나. γ가 근시안·원시안을 정하는 법.</p>
+      <div class="chips"><span class="chip">return</span><span class="chip">γ</span></div>
+    </a>
+  </div>
+
+  <div class="seclabel">PART 2 · 가치를 푸는 법</div>
+  <div class="cards">
+    <a class="ccard" style="--accent:var(--hot)" href="05-value-functions.html">
+      <div class="num">05</div><h3>가치함수 V와 Q</h3>
+      <p>이 상태/행동이 장기적으로 얼마나 좋은가. 히트맵으로 보는 가치.</p>
+      <div class="chips"><span class="chip">V(s)</span><span class="chip">Q(s,a)</span></div>
+    </a>
+    <a class="ccard" style="--accent:var(--q)" href="06-bellman.html">
+      <div class="num">06</div><h3>벨만 방정식</h3>
+      <p>"지금 보상 + 다음 칸의 가치". 가치를 재귀로 잇는 한 줄.</p>
+      <div class="chips"><span class="chip">recursive</span><span class="chip">backup</span></div>
+    </a>
+    <a class="ccard" style="--accent:var(--v)" href="07-dynamic-programming.html">
+      <div class="num">07</div><h3>동적계획법</h3>
+      <p>가치반복·정책반복. 값이 칸마다 수렴하는 스윕 애니메이션.</p>
+      <div class="chips"><span class="chip">value iter</span><span class="chip">policy iter</span></div>
+    </a>
+  </div>
+
+  <div class="seclabel">PART 3 · 경험으로 배우기</div>
+  <div class="cards">
+    <a class="ccard" style="--accent:var(--hot)" href="08-monte-carlo.html">
+      <div class="num">08</div><h3>몬테카를로</h3>
+      <p>모델 없이 끝까지 가보고 평균내기. 에피소드로 가치 추정.</p>
+      <div class="chips"><span class="chip">episode</span><span class="chip">average</span></div>
+    </a>
+    <a class="ccard" style="--accent:var(--q)" href="09-td-learning.html">
+      <div class="num">09</div><h3>시간차 학습 (TD)</h3>
+      <p>끝까지 안 가도 한 발짝 보고 추측을 갱신. 부트스트랩의 마법.</p>
+      <div class="chips"><span class="chip">TD(0)</span><span class="chip">bootstrap</span></div>
+    </a>
+    <a class="ccard" style="--accent:var(--v)" href="10-q-learning.html">
+      <div class="num">10</div><h3>Q-learning &amp; SARSA</h3>
+      <p>테이블을 채우며 최적 행동 학습. 오프폴리시 vs 온폴리시.</p>
+      <div class="chips"><span class="chip">off-policy</span><span class="chip">on-policy</span></div>
+    </a>
+  </div>
+
+  <div class="seclabel">PART 4 · 딥강화학습</div>
+  <div class="cards">
+    <a class="ccard" style="--accent:var(--hot)" href="11-dqn.html">
+      <div class="num">11</div><h3>함수근사 &amp; DQN</h3>
+      <p>Q-테이블이 너무 크면 신경망으로. 딥러닝과 만나는 다리.</p>
+      <div class="chips"><span class="chip">neural net</span><span class="chip">DQN</span></div>
+    </a>
+    <a class="ccard" style="--accent:var(--q)" href="12-policy-gradient.html">
+      <div class="num">12</div><h3>정책경사</h3>
+      <p>가치 대신 정책을 직접 학습. 좋았던 행동의 확률을 높인다.</p>
+      <div class="chips"><span class="chip">REINFORCE</span><span class="chip">policy</span></div>
+    </a>
+    <a class="ccard" style="--accent:var(--v)" href="13-actor-critic.html">
+      <div class="num">13</div><h3>Actor-Critic</h3>
+      <p>행동하는 배우 + 평가하는 비평가. 가치와 정책을 합치기.</p>
+      <div class="chips"><span class="chip">actor</span><span class="chip">critic</span></div>
+    </a>
+  </div>
+
+  <div class="seclabel">PART 5 · 큰 그림</div>
+  <div class="cards">
+    <a class="ccard" style="--accent:var(--good)" href="14-landscape.html">
+      <div class="num">14</div><h3>RL은 어디에 + 비교</h3>
+      <p>게임·로봇·RLHF 응용. 행동설계(FSM·BT)와 언제 무엇을 쓸까?</p>
+      <div class="chips"><span class="chip">RLHF</span><span class="chip">vs FSM/BT</span></div>
+    </a>
+  </div>
+
+  <p class="foot">// 강화학습 핵심 개념을 직접 만든 비영리 인터랙티브 학습 자료 · 모든 학습·가치·정책은 브라우저에서 실시간 계산</p>
+</div>
+</body>
+</html>
