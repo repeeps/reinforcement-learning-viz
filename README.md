@@ -25,7 +25,9 @@ open index.html                 # macOS
 python3 -m http.server 8000     # → http://localhost:8000
 ```
 
-## 챕터 (14개)
+## 챕터 (14개) — 로드맵
+
+> 🚧 현재 **0번 입문(`00-intro.html`)** 만 공개됐고, 아래 14개 챕터는 같은 사이클로 **순차 제작·공개 예정**입니다.
 
 **PART 1 · RL의 기본 틀**
 | # | 주제 | 핵심 인터랙션 |

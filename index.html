@@ -25,6 +25,10 @@
   .ccard .chip{font-family:'JetBrains Mono',monospace; font-size:10px; padding:3px 8px; border-radius:6px;
     background:var(--panel-2); border:1px solid var(--line); color:var(--muted);}
   .foot{margin-top:60px;}
+  .ccard.soon{opacity:.5; cursor:not-allowed;}
+  .ccard.soon:hover{transform:none; border-color:var(--line); box-shadow:none;}
+  .ccard.soon::after{content:'🚧 준비 중'; position:absolute; top:12px; right:14px; font-family:'JetBrains Mono',monospace;
+    font-size:10px; color:var(--hot); background:rgba(251,191,36,.12); border:1px solid var(--hot); border-radius:6px; padding:2px 7px;}
 </style>
 </head>
 <body>
@@ -134,5 +138,16 @@
 
   <p class="foot">// 강화학습 핵심 개념을 직접 만든 비영리 인터랙티브 학습 자료 · 모든 학습·가치·정책은 브라우저에서 실시간 계산</p>
 </div>
+<script>
+// 공개된 페이지만 클릭 가능 — 챕터를 완성할 때마다 파일명을 READY에 추가하세요.
+(function(){
+  const READY = new Set(['00-intro.html']);
+  document.querySelectorAll('a.ccard').forEach(a=>{
+    if(READY.has(a.getAttribute('href'))) return;
+    a.classList.add('soon');
+    a.addEventListener('click', e=>e.preventDefault());
+  });
+})();
+</script>
 </body>
 </html>

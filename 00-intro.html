@@ -15,6 +15,9 @@
   .maprow{display:flex; align-items:center; gap:10px; padding:10px 0; text-decoration:none;}
   .mapnum{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--accent,var(--q)); font-weight:700; min-width:64px;}
   .maparrow{text-align:center; color:var(--faint); font-size:16px; margin:-2px 0;}
+  .maprow.soon{opacity:.6; cursor:default;}
+  .soonbadge{font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--hot);
+    border:1px solid var(--hot); border-radius:6px; padding:2px 7px; white-space:nowrap;}
   .machines{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:6px 0 4px;}
   @media(max-width:560px){ .machines{grid-template-columns:1fr;} }
   .slot{background:var(--panel-2); border:1px solid var(--line); border-radius:14px; padding:14px; text-align:center;}
@@ -56,11 +59,11 @@
   <section class="panel" data-panel="1">
     <span class="kicker" style="color:var(--q)">Step 01 — Learning from Reward</span>
     <h2>보상만 주면, 길을 스스로 찾는다</h2>
-    <p class="lead">로봇(🤖)이 <b>⭐ 목표</b>에 닿으면 <b>+1</b>, <b>🕳️ 함정</b>에 빠지면 <b>−1</b>, 한 걸음마다 <b>−0.04</b>(꾸물대면 손해 · 미래 보상은 살짝 깎아 더해요 — '할인', 4장). 처음엔 아무것도 몰라 헤매지만, <b>한 걸음 옮길 때마다 바로</b> 가치를 조금씩 갱신하며(나중에 배울 'TD 학습') 에피소드를 거듭하면 <b>각 칸의 가치</b>와 <b>화살표 정책</b>이 또렷해져요. "에피소드 ▶"를 눌러보세요.</p>
+    <p class="lead">로봇(🤖)이 <b>⭐ 목표</b>에 닿으면 <b>+1</b>, <b>🕳️ 함정</b>에 빠지면 <b>−1</b>, 한 걸음마다 <b>−0.04</b>(꾸물대면 손해 · 미래 보상은 살짝 깎아 더해요 — '할인', 4장). 처음엔 아무것도 몰라 헤매지만, <b>한 걸음 옮길 때마다 바로</b> 가치를 조금씩 갱신하며(끝까지 안 가도 갱신하는 'TD 방식' — 9·10장) 에피소드를 거듭하면 <b>각 칸의 가치</b>와 <b>화살표 정책</b>이 또렷해져요. "에피소드 ▶"를 눌러보세요.</p>
     <div class="gridwrap">
       <div>
         <div id="gw"></div>
-        <div class="legend" style="margin-top:8px">⭐ 목표 +1 · 🕳️ 함정 −1 · 칸 색 = 그 자리서 앞으로 받을 <b style="color:var(--ink)">보상 합의 예상(가치)</b>, 초록↑·빨강↓ · <span style="color:var(--hot)">→ 가치가 가장 높은 방향(정책)</span></div>
+        <div class="legend" style="margin-top:8px">⭐ 목표 +1 · 🕳️ 함정 −1 · 칸 색 = 그 자리서 앞으로 받을 <b style="color:var(--ink)">보상의 (할인된) 합 예상(가치)</b>, 초록↑·빨강↓ · <span style="color:var(--hot)">→ 가치가 가장 높은 방향(정책)</span></div>
       </div>
       <div style="flex:1;min-width:220px">
         <div class="row" style="gap:8px;margin-bottom:10px">
@@ -85,7 +88,7 @@
       <span class="note" id="slotInfo"></span>
     </div>
     <div class="callout v" style="margin-top:8px">
-      <div class="ttl">탐험은 정말 이득일까? — 100번 당기기, 300판 평균</div>
+      <div class="ttl">탐험은 정말 이득일까? — 200번 당기기, 300판 평균</div>
       <p style="margin:0 0 10px">"항상 최고만(순수 활용)" vs "가끔 탐험(ε-greedy)"을 같은 조건에서 시뮬레이션했어요.</p>
       <div id="cmpBars"></div>
       <button class="btn" id="cmpRun" style="margin-top:10px">🎲 다시 시뮬레이션</button>
@@ -99,7 +102,7 @@
     <h2>이 코스에서 배울 것 — 그리고 왜 이 순서인지</h2>
     <p class="lead">먼저 <b>RL의 기본 틀</b>(밴딧·MDP·할인율)을 세우고, <b>가치를 푸는 법</b>(벨만·동적계획법)을 익혀요. 그다음 모델 없이 <b>경험으로 배우는 법</b>(몬테카를로·TD·Q-learning)으로 가고, <b>딥강화학습</b>(DQN·정책경사)으로 확장한 뒤, 마지막에 <b>큰 그림</b>으로 다른 분야와 잇습니다.</p>
     <div id="courseMap"></div>
-    <p class="note" style="margin-top:16px">→ 준비됐다면 <a href="01-what-is-rl.html" style="color:var(--q);font-weight:700">CH 01 · 강화학습이란</a>부터 시작하세요.</p>
+    <p class="note" style="margin-top:16px">→ 챕터는 <b>순차 공개 중</b>이에요. 우선 위 지도로 전체 흐름을 익혀두면, <b>CH 01 · 강화학습이란</b>이 열렸을 때 더 쉽게 따라올 수 있어요.</p>
   </section>
 
   <p class="foot">// 수식 없는 입문 챕터 · 직관 먼저, 자세한 동작은 다음 챕터부터 · <a href="index.html">목차</a></p>
@@ -210,7 +213,7 @@ const RL = VZ.RL;
       if(i===trail.length-1){
         const reached = RL.isGoal(env,pos[0],pos[1]);
         info(reached
-          ? `⭐ 목표 도달! ${steps}걸음, 받은 점수 합 ${VZ.fmt(ret,2)}(할인 전). 지나온 칸들의 가치가 갱신됐어요.`
+          ? `⭐ 목표 도달! ${steps}걸음, 받은 점수 합 ${VZ.fmt(ret,2)}(할인 전 — 칸 색 가치는 미래를 깎아 더해 이보다 작아요). 지나온 칸들의 가치가 갱신됐어요.`
           : (RL.isPit(env,pos[0],pos[1]) ? `🕳️ 함정에 빠졌어요(−1). 이 근처 가치가 낮아집니다 — 다음엔 피하겠죠.` : `시간 초과 — 아직 길을 못 찾았어요. 계속 반복하면 좋아져요.`));
         busy=false; cancelAnim=null;
       }
@@ -266,6 +269,8 @@ const RL = VZ.RL;
   }
   document.getElementById('slotReset').onclick=reset;
 
+  // 동점이면 무작위 선택 (RL.argmax는 첫 인덱스 고정 → greedy가 1번 기계로 쏠려 부당해짐).
+  const amax=a=>{const mx=Math.max(...a),idx=[];a.forEach((x,i)=>{if(x===mx)idx.push(i);});return idx[Math.floor(Math.random()*idx.length)];};
   // 전략 비교 시뮬레이션
   // 공정성: 두 전략 모두 처음 3턴은 각 기계를 한 번씩 워밍업한 뒤 —
   //  greedy=그때 제일 좋아 보인 것만 계속, ε-greedy=10% 확률로 가끔 다른 것도 시도.
@@ -275,14 +280,14 @@ const RL = VZ.RL;
     for(let t=0;t<N;t++){
       let i;
       if(t<3) i=t;                                  // 워밍업: 각 기계 한 번씩
-      else if(strategy==='greedy') i=RL.argmax([est(0),est(1),est(2)]);
-      else i = Math.random()<0.1 ? Math.floor(Math.random()*3) : RL.argmax([est(0),est(1),est(2)]);
+      else if(strategy==='greedy') i=amax([est(0),est(1),est(2)]);
+      else i = Math.random()<0.1 ? Math.floor(Math.random()*3) : amax([est(0),est(1),est(2)]);
       const win=Math.random()<TRUE[i]; n[i]++; if(win){w[i]++; score++;}
     }
     return score;
   }
   function runCompare(){
-    const TRIALS=300, N=100;
+    const TRIALS=300, N=200;
     let g=0, e=0;
     for(let t=0;t<TRIALS;t++){ g+=simulate('greedy',N); e+=simulate('eps',N); }
     const gAvg=g/TRIALS, eAvg=e/TRIALS, max=Math.max(gAvg,eAvg,1);
@@ -291,7 +296,7 @@ const RL = VZ.RL;
       VZ.barRow('항상 최고만', gAvg/max, {win:!epsWins, color:epsWins?'var(--slate)':null, pctText:VZ.fmt(gAvg,1)+'점'}) +
       VZ.barRow('가끔 탐험', eAvg/max, {win:epsWins, color:epsWins?null:'var(--slate)', pctText:VZ.fmt(eAvg,1)+'점'}) +
       `<div class="note" style="margin-top:8px">${epsWins
-        ? '→ 이번에도 <b>가끔 탐험</b>이 평균에서 앞섰어요. 한 판이 아니라 200판 평균이라는 점이 중요해요.'
+        ? '→ 이번에도 <b>가끔 탐험</b>이 평균에서 앞섰어요. 한 판이 아니라 300판 평균이라는 점이 중요해요.'
         : '→ 이번엔 우연히 <b>활용</b>이 근소하게 앞섰네요. 다시 돌려보면 보통 탐험이 이겨요 — 한 번의 운보다 평균이 핵심.'}</div>`;
   }
   document.getElementById('cmpRun').onclick=runCompare;
@@ -308,13 +313,19 @@ const RL = VZ.RL;
     ['CH 11~13','딥강화학습','함수근사·DQN(Q-테이블→신경망, 딥러닝과 만나는 다리) → 정책경사 → Actor-Critic.','11-dqn.html','var(--good)'],
     ['CH 14','큰 그림','RL은 어디에(게임·로봇·RLHF) + 행동설계(FSM·BT)와 언제 무엇을 쓸지 비교.','14-landscape.html','var(--pink)'],
   ];
-  document.getElementById('courseMap').innerHTML = MAP.map((m,i)=>
-    `${i>0?'<div class="maparrow">↓</div>':''}
-     <a class="maprow" href="${m[3]}" style="--accent:${m[4]}">
+  const READY = new Set([]);   // 완성된 챕터 파일명을 여기 추가하면 링크가 활성화돼요
+  document.getElementById('courseMap').innerHTML = MAP.map((m,i)=>{
+    const soon = !READY.has(m[3]);
+    const tag = soon ? 'span' : 'a';                       // 미완성은 span → 클릭/404 원천 차단
+    const href = soon ? '' : `href="${m[3]}"`;
+    const right = soon ? '<span class="soonbadge">준비 중</span>' : `<span style="color:${m[4]};font-size:18px">→</span>`;
+    return `${i>0?'<div class="maparrow">↓</div>':''}
+     <${tag} class="maprow${soon?' soon':''}" ${href} style="--accent:${m[4]}">
        <span class="mapnum">${m[0]}</span>
        <span style="flex:1"><b style="color:var(--ink)">${m[1]}</b><div class="note" style="margin-top:2px">${m[2]}</div></span>
-       <span style="color:${m[4]};font-size:18px">→</span>
-     </a>`).join('');
+       ${right}
+     </${tag}>`;
+  }).join('');
 })();
 </script>
 </body>
