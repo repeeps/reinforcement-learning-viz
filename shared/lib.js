@@ -457,7 +457,10 @@
     return P;
   }
 
-  VZ.RL = { ACT, keyOf, argmax, argmaxRandom, asPits, isWall, isGoal, isPit, isTerminal, stepState, valColor, gridSVG, stripSVG, PERP, transDist, sampleNext, sampleCategorical, shortestPathPolicy };
+  // 표준 4×4 그리드(여러 챕터 공유) — 좌상 목표·그 아래 함정·좌하 시작. 읽기 전용.
+  const GRID4 = Object.freeze({ rows: 4, cols: 4, goal: [0, 3], pit: [1, 3], start: [3, 0] });
+
+  VZ.RL = { ACT, keyOf, argmax, argmaxRandom, asPits, isWall, isGoal, isPit, isTerminal, stepState, valColor, gridSVG, stripSVG, PERP, transDist, sampleNext, sampleCategorical, shortestPathPolicy, GRID4 };
 })(window);
 
 /* ============================================================
