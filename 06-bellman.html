@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>06 벨만 방정식 · 강화학습, 눈으로 보기</title>
+<link rel="stylesheet" href="shared/theme.css">
+<style>
+  .gridwrap{display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;}
+  .legend{font-size:12px; color:var(--faint); line-height:1.7; font-family:'JetBrains Mono',monospace;}
+  #strip0, #gw1{cursor:pointer;}
+  .eq{font-family:'JetBrains Mono',monospace; font-size:15px; background:var(--panel); border:1px dashed var(--line);
+    border-radius:10px; padding:14px; text-align:center; line-height:2;}
+  .eq b{color:var(--hot);} .eq .s{color:var(--q);} .eq .nx{color:var(--good);}
+  .cand{display:grid; grid-template-columns:64px 1fr; gap:8px; align-items:center; margin:5px 0; font-family:'JetBrains Mono',monospace; font-size:13px;}
+  .cand.win{color:var(--hot); font-weight:700;} .cand .bar{height:16px; border-radius:5px; background:var(--q); opacity:.85;}
+  .cand.win .bar{background:var(--hot);} .cand.neg .bar{background:var(--k);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topnav" id="topnav"></div>
+
+  <header>
+    <div class="tag">PART 2 · Chapter 06</div>
+    <h1>벨만 방정식 — 가치를 잇는 한 줄</h1>
+    <p class="intro">한 칸의 가치를 어떻게 알까요? 놀랍게도 <b>가치는 다음 칸의 가치로 정의돼요</b>: <span class="mono">V(s) = (지금 보상) + γ·V(다음 칸)</span>. 자기 자신을 참조하는 것 같지만, 이 <b>벨만 방정식</b>이 가치를 푸는 열쇠예요. 한 줄로 모든 가치가 사슬처럼 엮여요.</p>
+  </header>
+
+  <nav class="stepper" id="stepper">
+    <button data-s="0" class="active">00 · 가치의 자기참조</button>
+    <button data-s="1">01 · 한 칸 백업</button>
+    <button data-s="2">02 · 반복하면 퍼진다</button>
+    <button data-s="3">03 · 정리</button>
+  </nav>
+
+  <!-- STEP 0 -->
+  <section class="panel show" data-panel="0">
+    <span class="kicker" style="color:var(--hot)">Step 00 — Value Refers to Itself</span>
+    <h2>"다음 칸의 가치"로 지금 가치를 적는다</h2>
+    <p class="lead">복도 끝에 보물(💎+1)이 있어요. 오른쪽 정책에서 각 칸의 가치 = <b>(그 방향으로 갈 때 받는 보상) + γ·(도착 칸 가치)</b>. 걸음 보상은 0이고 <b>보물에 닿는 순간 +1</b>이라, 보물 직전 칸은 1.0, 그 왼쪽부터 0.9·0.81…로 γ가 한 번씩 더 곱해져요(γ=0.9). 칸을 클릭해 확인하세요.</p>
+    <div id="strip0"></div>
+    <div class="legend" style="margin-top:8px">숫자 = V(s) · 칸을 클릭하면 벨만 관계를 보여줘요</div>
+    <div class="eq" id="eq0" style="margin-top:14px"></div>
+    <p class="note" style="margin-top:14px">→ 멀리 있는 보물일수록 γ가 여러 번 곱해져 가치가 작아져요(0.9 → 0.81 → …). "지금 = 보상 + γ×다음"이라는 한 줄이 칸들을 <b>사슬처럼</b> 잇죠.</p>
+  </section>
+
+  <!-- STEP 1 -->
+  <section class="panel" data-panel="1">
+    <span class="kicker" style="color:var(--q)">Step 01 — One Backup</span>
+    <h2>벨만 최적 방정식: 가장 좋은 다음으로</h2>
+    <p class="lead">여러 행동이 가능하면, 최적 가치는 <b>가장 좋은 행동</b>을 따라요: <span class="mono">V*(s) = maxₐ [ 보상 + γ·V*(다음) ]</span>. 칸을 클릭하면 네 행동의 후보값과 <b>최댓값(백업)</b>을 보여줘요.</p>
+    <div class="gridwrap">
+      <div><div id="gw1"></div>
+        <div class="legend" style="margin-top:8px">칸 클릭 → 네 행동의 [보상+γ·다음가치] 후보 · 노랑=최댓값</div></div>
+      <div style="flex:1;min-width:240px"><div class="callout q" id="info1"></div></div>
+    </div>
+    <p class="note" style="margin-top:14px">→ 이 "다음 가치를 끌어와 지금 가치를 갱신"하는 한 스텝을 <b>백업(backup)</b>이라 불러요. 최적 가치는 이 식을 <b>모든 칸에서 동시에 만족</b>하는 값이에요.</p>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="panel" data-panel="2">
+    <span class="kicker" style="color:var(--v)">Step 02 — Backups Propagate</span>
+    <h2>전부 0에서 시작해도, 백업을 반복하면 채워진다</h2>
+    <p class="lead">가치를 <b>모두 0</b>으로 두고, 매 칸에 벨만 백업을 한 번씩 적용(=한 <b>스윕</b>)하길 반복해요. 보물 근처부터 값이 차오르며 <b>멀리까지 퍼져</b> 결국 정확한 V*로 수렴해요.</p>
+    <div class="row" style="gap:8px;margin-bottom:8px">
+      <button class="btn" id="sweep">▶ 한 스윕</button>
+      <button class="btn" id="conv">▶▶ 수렴까지</button>
+      <button class="btn" id="reset2" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">↺ 0으로</button>
+    </div>
+    <div class="gridwrap">
+      <div><div id="gw2"></div></div>
+      <div style="flex:1;min-width:210px"><div class="callout v" id="info2"></div></div>
+    </div>
+    <p class="note" style="margin-top:14px">→ 이렇게 "벨만 백업을 수렴할 때까지 반복"하는 게 바로 다음 장의 <b>가치반복(value iteration)</b> — 동적계획법이에요. 벨만 방정식이 알고리즘이 되는 순간이죠.</p>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="panel" data-panel="3">
+    <span class="kicker" style="color:var(--good)">Step 03 — Recap</span>
+    <h2>두 가지 벨만 방정식</h2>
+    <div class="twocol" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="callout q"><div class="ttl">기대 방정식 (정책 π)</div>
+        <p style="margin:0">V<sup>π</sup>(s) = 보상 + γ·V<sup>π</sup>(<b>정책이 가는 다음</b>). "이 정책을 따르면 얼마?"를 정의.</p></div>
+      <div class="callout good"><div class="ttl">최적 방정식 (V*)</div>
+        <p style="margin:0">V*(s) = <b>maxₐ</b>[보상 + γ·V*(다음)]. "최선을 다하면 얼마?"를 정의.</p></div>
+    </div>
+    <div class="callout" style="margin-top:14px">
+      <p style="margin:0">벨만 방정식은 <b>가치들이 서로 만족해야 하는 연립 관계</b>예요. 이 관계를 푸는 방법이 곧 가치를 구하는 방법 — 모델을 알 때는 <b>반복 백업(DP)</b>, 모를 때는 <b>경험으로 추정(MC·TD)</b>. 이 책의 나머지가 전부 "벨만을 어떻게 푸느냐"예요.</p>
+    </div>
+    <p class="note" style="margin-top:16px">→ 다음 <b>7장 동적계획법</b>에서 벨만 백업을 본격적인 알고리즘(가치반복·정책반복)으로 정리해요.</p>
+  </section>
+
+  <p class="foot">// 수식 없는 직관 입문 · 모든 가치·백업은 브라우저에서 실시간 계산 · <a href="index.html">목차</a></p>
+</div>
+
+<script src="shared/lib.js"></script>
+<script>
+VZ.mountTopnav('#topnav', 'CH 06 · 벨만');
+VZ.setupStepper();
+const RL = VZ.RL;
+const GAMMA=0.9;
+
+// ---------- STEP 0 : 1D 자기참조 ----------
+(function(){
+  const N=6, GOAL=N-1;               // 오른쪽 끝 보물
+  const term=s=>s===GOAL;
+  const reward=s=> s===GOAL?1:0;     // 걸음 보상 0
+  // 오른쪽 정책의 V: V(s)=reward(s+1)+γ(term?0:V(s+1))
+  const V=Array(N).fill(0);
+  for(let s=N-2;s>=0;s--){ const ns=s+1; V[s]=reward(ns)+(term(ns)?0:GAMMA*V[ns]); }
+  let sel=0;
+  function render(){
+    document.getElementById('strip0').innerHTML = RL.stripSVG(N, {cell:62, V, vmax:1, showVals:true,
+      goals:{[GOAL]:{emoji:'💎',col:'var(--good)'}}, agent:null});
+    const [a,b]=[sel, sel+1];
+    if(term(sel)){ document.getElementById('eq0').innerHTML=`<span class="s">V(${sel})</span> = 0 — 보물 칸(종료). 여기선 더 받을 게 없어요.`; return; }
+    const ns=sel+1;
+    document.getElementById('eq0').innerHTML =
+      `<span class="s">V(${sel})</span> = 보상(${reward(ns)}) + γ·<span class="nx">V(${ns})</span> = ${reward(ns)} + 0.9 × ${VZ.fmt(V[ns],2)} = <b>${VZ.fmt(V[sel],2)}</b>`;
+  }
+  document.getElementById('strip0').addEventListener('click', e=>{
+    const svg=e.currentTarget.querySelector('svg'); if(!svg)return;
+    const rect=svg.getBoundingClientRect(), cw=rect.width/svg.viewBox.baseVal.width;
+    const c=Math.floor((e.clientX-rect.left-12*cw)/(62*cw)); if(c>=0&&c<N){ sel=c; render(); }
+  });
+  render();
+})();
+
+// ---------- 공통 그리드(Step1·2) ----------
+const env={rows:4, cols:4, goal:[0,3], pit:[1,3]};
+const STEP=-0.04;
+const reward=(r,c)=> RL.isGoal(env,r,c)?1 : RL.isPit(env,r,c)?-1 : STEP;
+const cells=()=>{ const a=[]; for(let r=0;r<4;r++)for(let c=0;c<4;c++)a.push([r,c]); return a; };
+function vstar(){
+  let V={}; cells().forEach(([r,c])=>V[r+','+c]=0);
+  for(let it=0;it<200;it++){ const nV={}; let d=0;
+    cells().forEach(([r,c])=>{ const k=r+','+c; if(RL.isTerminal(env,r,c)){nV[k]=0;return;}
+      let best=-1e9; for(const a of [0,1,2,3]){ const [nr,nc]=RL.stepState(env,r,c,a);
+        best=Math.max(best, reward(nr,nc)+(RL.isTerminal(env,nr,nc)?0:GAMMA*V[nr+','+nc])); } nV[k]=best;
+      d=Math.max(d,Math.abs(best-V[k])); });
+    V=nV; if(d<1e-9) break; }
+  return V;
+}
+function Vgrid(V){ const g=[]; for(let r=0;r<4;r++){g.push([]);for(let c=0;c<4;c++){g[r].push(RL.isTerminal(env,r,c)?0:V[r+','+c]);}} return g; }
+function polStar(V){ const g=[]; for(let r=0;r<4;r++){g.push([]);for(let c=0;c<4;c++){
+  if(RL.isTerminal(env,r,c)){g[r].push(null);continue;} let best=-1e9,ba=null;
+  for(const a of [0,1,2,3]){ const [nr,nc]=RL.stepState(env,r,c,a); const q=reward(nr,nc)+(RL.isTerminal(env,nr,nc)?0:GAMMA*V[nr+','+nc]); if(q>best){best=q;ba=a;} }
+  g[r].push(ba); }} return g; }
+
+// ---------- STEP 1 : 한 칸 백업 ----------
+(function(){
+  const V=vstar();
+  let sel=[3,0];
+  function render(){
+    document.getElementById('gw1').innerHTML = RL.gridSVG(env,{cell:62, V:Vgrid(V), policy:polStar(V), showVals:true, highlight:sel});
+    const [r,c]=sel;
+    if(RL.isTerminal(env,r,c)){ document.getElementById('info1').innerHTML=`<div class="ttl" style="color:var(--q)">(${r},${c}) 종료 상태</div><p style="margin:0">V*=0. 다른 칸을 클릭해보세요.</p>`; return; }
+    const qs=[0,1,2,3].map(a=>{ const [nr,nc]=RL.stepState(env,r,c,a); return {a, q:reward(nr,nc)+(RL.isTerminal(env,nr,nc)?0:GAMMA*V[nr+','+nc])}; });
+    const best=Math.max(...qs.map(x=>x.q)), maxAbs=Math.max(0.01,...qs.map(x=>Math.abs(x.q)));
+    const rows=qs.map(({a,q})=>`<div class="cand ${q===best?'win':''} ${q<0?'neg':''}">
+      <div>${RL.ACT[a].sym} ${VZ.fmt(q,2)}</div><div class="bar" style="width:${(Math.abs(q)/maxAbs*100).toFixed(0)}%"></div></div>`).join('');
+    document.getElementById('info1').innerHTML =
+      `<div class="ttl" style="color:var(--q)">V*(${r},${c}) = maxₐ[보상+γ·다음] = <b style="color:var(--hot)">${VZ.fmt(best,2)}</b></div>
+       ${rows}
+       <p style="margin:8px 0 0;font-size:12.5px">네 행동의 후보 중 <b>가장 큰 값(max)</b>이 곧 V*. <span style="color:var(--faint)">5장에선 "정책이 고른" Q를 봤다면, 여기선 "가장 큰" Q를 골라요 — 그게 벨만 <b>최적</b> 방정식.</span></p>`;
+  }
+  document.getElementById('gw1').addEventListener('click', e=>{
+    const svg=e.currentTarget.querySelector('svg'); if(!svg)return;
+    const rect=svg.getBoundingClientRect(), cw=rect.width/svg.viewBox.baseVal.width;
+    const c=Math.floor((e.clientX-rect.left-12*cw)/(62*cw)), r=Math.floor((e.clientY-rect.top-12*cw)/(62*cw));
+    if(r>=0&&r<4&&c>=0&&c<4){ sel=[r,c]; render(); }
+  });
+  render();
+})();
+
+// ---------- STEP 2 : 백업 전파 ----------
+(function(){
+  const Vstar=vstar();
+  let V, sweeps;
+  function reset(){ V={}; cells().forEach(([r,c])=>V[r+','+c]=0); sweeps=0; render(); info('전부 0에서 출발. "한 스윕"으로 벨만 백업을 한 번씩 적용해보세요.'); }
+  function sweepOnce(){
+    const nV={}; let d=0;
+    cells().forEach(([r,c])=>{ const k=r+','+c; if(RL.isTerminal(env,r,c)){nV[k]=0;return;}
+      let best=-1e9; for(const a of [0,1,2,3]){ const [nr,nc]=RL.stepState(env,r,c,a);
+        best=Math.max(best, reward(nr,nc)+(RL.isTerminal(env,nr,nc)?0:GAMMA*V[nr+','+nc])); } nV[k]=best;
+      d=Math.max(d,Math.abs(best-V[k])); });
+    V=nV; sweeps++; return d;
+  }
+  function maxGap(){ let g=0; cells().forEach(([r,c])=>{ if(!RL.isTerminal(env,r,c)) g=Math.max(g,Math.abs(V[r+','+c]-Vstar[r+','+c])); }); return g; }
+  function render(){ const conv=maxGap()<1e-6; document.getElementById('gw2').innerHTML = RL.gridSVG(env,{cell:62, V:Vgrid(V), policy:(conv&&sweeps>0?polStar(V):null), showVals:true}); }
+  function info(m){ document.getElementById('info2').innerHTML=`<div class="ttl" style="color:var(--v)">스윕 ${sweeps}회 · V*까지 최대오차 ${VZ.fmt(maxGap(),3)}</div><p style="margin:0">${m}</p>`; }
+  document.getElementById('sweep').onclick=()=>{ const d=sweepOnce(); render(); info(d<1e-9?'더 안 바뀌어요 — 수렴! 이게 정확한 V*예요.':'보물 근처부터 값이 퍼져요. 한 번 더 눌러보세요.'); };
+  document.getElementById('conv').onclick=()=>{ if(maxGap()<1e-9){ info('이미 수렴했어요 — 더 바뀔 게 없어요.'); return; } let d; do{ d=sweepOnce(); }while(d>1e-9 && sweeps<200); render(); info('수렴 완료! 벨만 백업을 반복하니 정확한 V*에 도달했어요.'); };
+  document.getElementById('reset2').onclick=reset;
+  reset();
+})();
+</script>
+</body>
+</html>
