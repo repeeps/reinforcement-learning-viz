@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>14 RL은 어디에 + 비교 · 강화학습, 눈으로 보기</title>
+<link rel="stylesheet" href="shared/theme.css">
+<style>
+  .use-card{cursor:pointer; user-select:none;}
+  .use-card .reveal{display:none; margin-top:10px; font-size:13px; color:var(--muted); line-height:1.6;}
+  .use-card.open .reveal{display:block;} .use-card.open{border-color:var(--q);} .use-card.open .clickhint{display:none;}
+  .use-emoji{font-size:30px; line-height:1;}
+  .twocol{display:grid; grid-template-columns:1fr 1fr; gap:16px;} @media(max-width:680px){.twocol{grid-template-columns:1fr;}}
+  .colbox{background:var(--panel-2); border:1px solid var(--line); border-radius:14px; padding:14px;}
+  .cmp{width:100%; border-collapse:collapse; font-size:13px; margin-top:8px;}
+  .cmp th,.cmp td{padding:9px 8px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top;}
+  .cmp th{color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.05em;}
+  .cmp td:first-child{color:var(--ink); font-weight:700; white-space:nowrap;}
+  .dqn{display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center; margin:10px 0;}
+  .dqn .box{background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:10px 13px; text-align:center; font-size:12.5px;}
+  .dqn .arr{color:var(--faint); font-size:18px;}
+  .maprow{display:flex; align-items:center; gap:10px; padding:8px 0;}
+  .mapnum{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--accent,var(--q)); font-weight:700; min-width:64px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topnav" id="topnav"></div>
+
+  <header>
+    <div class="tag">PART 5 · Chapter 14</div>
+    <h1>RL은 어디에 — 그리고 언제 무엇을 쓸까</h1>
+    <p class="intro">밴딧부터 Actor-Critic까지 왔어요. 이제 큰 그림이에요. 강화학습은 <b>게임·로봇·추천·LLM</b>에서 빛나요. 하지만 늘 RL이 답은 아니에요 — 게임 NPC라면 <b>FSM·행동 트리</b>로 손수 짜는 게 나을 때도 많죠. 둘을 비교하고, RL이 LLM을 다듬는 <b>RLHF</b>까지 보며 마무리해요.</p>
+  </header>
+
+  <nav class="stepper" id="stepper">
+    <button data-s="0" class="active">00 · 어디에 쓰나</button>
+    <button data-s="1">01 · RL vs FSM·BT</button>
+    <button data-s="2">02 · RLHF</button>
+    <button data-s="3">03 · 코스 회고</button>
+  </nav>
+
+  <!-- STEP 0 -->
+  <section class="panel show" data-panel="0">
+    <span class="kicker" style="color:var(--hot)">Step 00 — Where RL Shines</span>
+    <h2>규칙을 손으로 못 짜는 곳에서</h2>
+    <p class="lead">경우의 수가 어마어마하거나, 좋은 전략을 사람이 명시하기 어려운 문제 — 거기서 RL이 진가를 발휘해요. 카드를 눌러보세요.</p>
+    <div class="grid3" id="useCards"></div>
+    <p class="note" style="margin-top:16px">→ 공통점: <b>"정답 행동을 일일이 알려줄 순 없지만, 결과(보상)는 줄 수 있다."</b> 그게 RL을 쓸 신호예요.</p>
+  </section>
+
+  <!-- STEP 1 -->
+  <section class="panel" data-panel="1">
+    <span class="kicker" style="color:var(--q)">Step 01 — RL vs Hand-Designed</span>
+    <h2>같은 NPC, 세 가지 만드는 법</h2>
+    <p class="lead">"적이 멀면 순찰, 보이면 추격, 붙으면 공격"하는 NPC. <b>FSM</b>(상태기계)·<b>BT</b>(행동트리)는 <b>사람이 규칙을 직접</b> 짜고, <b>RL</b>은 <b>보상으로 학습</b>해요. 적 거리를 바꿔 FSM·BT가 같은 결정을 내리는 걸 보세요.</p>
+    <div class="row" style="gap:8px;margin-bottom:8px">
+      <span class="note">적 거리:</span>
+      <button class="btn" id="dFar">멀다</button>
+      <button class="btn" id="dNear" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">보임</button>
+      <button class="btn" id="dClose" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">붙음</button>
+    </div>
+    <div class="twocol">
+      <div class="colbox"><h4 style="color:var(--q);margin:0 0 6px">FSM (상태 기계)</h4><div id="fsm"></div></div>
+      <div class="colbox"><h4 style="color:var(--v);margin:0 0 6px">BT (행동 트리)</h4><div id="bt"></div></div>
+    </div>
+    <p class="note" style="margin:10px 0 6px">→ 같은 입력에 같은 행동이지만, <b>RL이라면</b> 이 규칙을 안 짜요 — 수없이 싸워보고 <b>보상(이기면+)으로 스스로</b> "언제 추격/공격할지"를 배우죠. 셋의 트레이드오프:</p>
+    <table class="cmp" id="cmpTable"></table>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="panel" data-panel="2">
+    <span class="kicker" style="color:var(--v)">Step 02 — RLHF</span>
+    <h2>RL이 LLM을 "도움 되게" 다듬는다</h2>
+    <p class="lead">챗봇은 "정답 문장"을 일일이 줄 수 없어요. 하지만 사람이 <b>두 답 중 뭐가 더 나은지</b>는 고를 수 있죠. 이 선호를 <b>보상</b>으로 바꿔 RL로 미세조정하는 게 <b>RLHF</b>(인간 피드백 기반 강화학습)예요.</p>
+    <div class="dqn">
+      <div class="box">① 사람이<br><b>두 답 비교·순위</b></div>
+      <div class="arr">→</div>
+      <div class="box" style="border-color:var(--q)">② <b>보상 모델</b><br>"좋은 답"에 점수</div>
+      <div class="arr">→</div>
+      <div class="box" style="border-color:var(--v)">③ 그 점수를 보상 삼아<br><b>RL로 LLM 미세조정</b></div>
+    </div>
+    <div class="callout" style="margin-top:10px">
+      <p style="margin:0"><b style="color:var(--hot)">여기서 배운 게 다 쓰여요</b>: 보상 신호(1·4장), 정책=확률분포(12장), Actor-Critic/PPO(13장)가 그대로 등장해요. LLM이 곧 <b>정책</b>(다음 단어 확률), 사람 선호가 <b>보상</b>이죠. 딥러닝(언어 이해)과 강화학습(선호 정렬)이 만나는 지점이에요.</p>
+    </div>
+    <p class="note" style="margin-top:14px">→ "정답을 못 주지만 결과는 평가할 수 있다"는 RL의 정신이, 가장 현대적인 AI인 LLM 정렬에 그대로 적용돼요.</p>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="panel" data-panel="3">
+    <span class="kicker" style="color:var(--good)">Step 03 — The Journey</span>
+    <h2>여기까지 온 길</h2>
+    <p class="lead">14개 챕터를 한 줄로 잇자면 — <b>"보상으로 가치를 알고, 가치로 정책을 찾는다"</b>의 여정이었어요.</p>
+    <div id="recap"></div>
+    <div class="callout good" style="margin-top:14px">
+      <div class="ttl">한 장으로 보는 RL</div>
+      <p style="margin:0">탐험으로 <b>경험</b>을 모으고(2장) → 그 경험으로 <b>가치</b>를 추정하며(5·8·9장) → 가치로 <b>정책</b>을 개선하고(7·10장) → 거대한 문제는 <b>신경망</b>으로(11장) → 정책을 <b>직접</b> 학습하고(12장) → 둘을 <b>합쳐</b>(13장) 현대 RL로. 전부 하나의 목표 — <b>기대 리턴 최대화</b>를 향해요.</p>
+    </div>
+    <p class="note" style="margin-top:16px">→ 더 넓게: <b>선형대수·확률</b>이 토대이고, <b>딥러닝</b>이 인식을 맡아 RL의 함수근사(11장)로 만나요. <b>행동설계(FSM·BT)</b>는 RL의 대안이자 짝이고요(앞 Step 01에서 비교했죠). 수고하셨어요 — 이제 에이전트가 "스스로 배우는" 원리가 보일 거예요. 🎉</p>
+    <p class="note" style="margin-top:10px">↩ <a href="index.html" style="color:var(--q);font-weight:700">목차로 돌아가기</a></p>
+  </section>
+
+  <p class="foot">// 수식 없는 직관 입문 · 14장 완 · <a href="index.html">목차</a></p>
+</div>
+
+<script src="shared/lib.js"></script>
+<script>
+VZ.mountTopnav('#topnav', 'CH 14 · 큰 그림');
+VZ.setupStepper();
+const SM=VZ.SM, BT=VZ.BT;
+
+// ---------- STEP 0 : 응용 카드 ----------
+(function(){
+  const U=[
+    ['🏆','게임 정복','바둑·체스·아타리·스타크래프트에서 사람을 넘어섰어요. 규칙만 주고 스스로 둬보며 학습.'],
+    ['🦿','로봇 제어','걷기·물건 집기·드론 비행. 시뮬레이션에서 수백만 번 시행착오로 동작을 익혀요.'],
+    ['🚗','자율주행·교통','차선·신호·경로처럼 연속 결정이 필요한 곳. 사람이 모든 상황을 못 짜니까요.'],
+    ['📈','추천·트레이딩','클릭·수익을 보상 삼아 장기적으로 더 나은 추천/주문 전략을 학습.'],
+    ['💬','LLM 정렬 (RLHF)','사람 선호를 보상으로, ChatGPT·Claude를 "도움 되게" 다듬는 마지막 단계.'],
+    ['⚡','자원·에너지','데이터센터 냉각, 전력망 제어처럼 끝없이 이어지는 최적 제어.'],
+  ];
+  document.getElementById('useCards').innerHTML = U.map((u,i)=>
+    `<div class="card use-card"><div class="use-emoji">${u[0]}</div><h4 style="margin:8px 0 0">${u[1]}</h4>
+      <div class="reveal">${u[2]}</div><div class="note clickhint" style="margin-top:8px;font-size:11px;color:var(--faint)">클릭해서 보기 ▾</div></div>`).join('');
+  document.getElementById('useCards').addEventListener('click',e=>{ const c=e.target.closest('.use-card'); if(c)c.classList.toggle('open'); });
+})();
+
+// ---------- STEP 1 : FSM·BT 비교 ----------
+(function(){
+  let dist='far';  // far / near / close
+  const fsmStates=[
+    {id:'patrol',label:'순찰',x:90,y:60},
+    {id:'chase',label:'추격',x:300,y:60},
+    {id:'attack',label:'공격',x:300,y:170},
+  ];
+  function fsmActive(){ return dist==='far'?'patrol':dist==='near'?'chase':'attack'; }
+  function buildBT(){
+    return {id:'root',type:'selector',name:'행동',children:[
+      {id:'s1',type:'sequence',name:'교전',children:[
+        {id:'c1',type:'condition',name:'붙었나?',fn:bb=>bb.dist==='close'?'success':'failure'},
+        {id:'a1',type:'action',name:'공격',fn:()=>'success'}]},
+      {id:'s2',type:'sequence',name:'접근',children:[
+        {id:'c2',type:'condition',name:'보이나?',fn:bb=>bb.dist!=='far'?'success':'failure'},
+        {id:'a2',type:'action',name:'추격',fn:()=>'success'}]},
+      {id:'a3',type:'action',name:'순찰',fn:()=>'success'}]};
+  }
+  function render(){
+    const cur=fsmActive();
+    const trans=[
+      {from:'patrol',to:'chase',label:'보임',active:(dist==='near')},
+      {from:'chase',to:'patrol',label:'놓침',active:false},
+      {from:'chase',to:'attack',label:'붙음',active:(dist==='close')},
+      {from:'attack',to:'chase',label:'떨어짐',active:false},
+    ];
+    document.getElementById('fsm').innerHTML = SM.draw(fsmStates, trans, {W:420,H:230,active:cur,r:32});
+    const tree=buildBT();                                   // 한 번만 생성해 tick·draw 공유
+    const {visited}=BT.tick(tree,{dist}); const map={}; visited.forEach(v=>map[v.id]=v.status);
+    document.getElementById('bt').innerHTML = BT.draw(tree, map, {W:420});
+    [['dFar','far'],['dNear','near'],['dClose','close']].forEach(([id,d])=>{
+      document.getElementById(id).style.cssText = d===dist?'':'border-color:var(--line);background:var(--panel-2);color:var(--muted)'; });
+  }
+  document.getElementById('dFar').onclick=()=>{dist='far';render();};
+  document.getElementById('dNear').onclick=()=>{dist='near';render();};
+  document.getElementById('dClose').onclick=()=>{dist='close';render();};
+  render();
+
+  const ROWS=[
+    ['규칙 만들기','사람이 직접(상태·전이)','사람이 직접(모듈 가지)','보상으로 <b>자동 학습</b>'],
+    ['예측·해석','쉬움(투명)','쉬움(구조적)','어려움(블랙박스)'],
+    ['유연성·확장','낮음(전이 폭발)','중간(가지 추가)','높음(데이터로)'],
+    ['데이터·연산','거의 불필요','거의 불필요','많이 필요'],
+    ['언제 쓰나','규칙 명확·소규모','복잡한 게임 AI','규칙 짜기 어렵고 데이터·시뮬 풍부'],
+  ];
+  document.getElementById('cmpTable').innerHTML =
+    `<tr><th></th><th style="color:var(--q)">FSM</th><th style="color:var(--v)">BT</th><th style="color:var(--hot)">RL</th></tr>`+
+    ROWS.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('');
+})();
+
+// ---------- STEP 3 : 코스 회고 ----------
+(function(){
+  const M=[
+    ['CH 01~04','기본 틀','강화학습이란 · 밴딧(탐험/활용) · MDP · 할인율','var(--q)'],
+    ['CH 05~07','가치 풀기','가치함수 V·Q · 벨만 · 동적계획법','var(--v)'],
+    ['CH 08~10','경험으로','몬테카를로 · TD · Q-learning·SARSA','var(--hot)'],
+    ['CH 11~13','딥강화학습','함수근사·DQN · 정책경사 · Actor-Critic','var(--good)'],
+  ];
+  document.getElementById('recap').innerHTML = M.map((m,i)=>
+    `${i>0?'<div style="text-align:center;color:var(--faint)">↓</div>':''}
+     <div class="maprow" style="--accent:${m[3]}"><span class="mapnum">${m[0]}</span>
+       <span style="flex:1"><b style="color:var(--ink)">${m[1]}</b> — <span class="note" style="display:inline">${m[2]}</span></span></div>`).join('');
+})();
+</script>
+</body>
+</html>
