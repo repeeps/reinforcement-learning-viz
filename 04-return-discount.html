@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>04 누적보상과 할인율 · 강화학습, 눈으로 보기</title>
+<link rel="stylesheet" href="shared/theme.css">
+<style>
+  .twocol{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media(max-width:680px){ .twocol{grid-template-columns:1fr;} }
+  .colbox{background:var(--panel-2); border:1px solid var(--line); border-radius:14px; padding:16px;}
+  .tl{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;}
+  .tl .step{width:46px; text-align:center;}
+  .tl .box{height:40px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:13px; border:1px solid var(--line); background:var(--panel);}
+  .tl .t{font-size:10px; color:var(--faint); margin-top:3px; font-family:'JetBrains Mono',monospace;}
+  .legend{font-size:12px; color:var(--faint); line-height:1.7; font-family:'JetBrains Mono',monospace;}
+  .big{font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topnav" id="topnav"></div>
+
+  <header>
+    <div class="tag">PART 1 · Chapter 04</div>
+    <h1>누적 보상과 할인율 — 미래를 얼마나 쳐줄까</h1>
+    <p class="intro">RL이 키우려는 건 <b>한 번의 보상</b>이 아니라 <b>앞으로 받을 보상의 총합</b>(리턴)이에요. 그런데 먼 미래의 보상은 불확실하고 덜 급하죠. 그래서 미래일수록 조금씩 깎는 <b>할인율 γ</b>를 써요. γ 하나가 에이전트를 <b>근시안</b>으로도 <b>원시안</b>으로도 만들어요.</p>
+  </header>
+
+  <nav class="stepper" id="stepper">
+    <button data-s="0" class="active">00 · 미래까지 더하기</button>
+    <button data-s="1">01 · 할인율 γ</button>
+    <button data-s="2">02 · γ가 행동을 바꾼다</button>
+    <button data-s="3">03 · 정리</button>
+  </nav>
+
+  <!-- STEP 0 -->
+  <section class="panel show" data-panel="0">
+    <span class="kicker" style="color:var(--hot)">Step 00 — Sum the Future</span>
+    <h2>지금만 보면 속는다</h2>
+    <p class="lead">두 계획이 있어요. <b>계획 A</b>는 <b>당장 +5</b>를 받고 끝, <b>계획 B</b>는 참았다가 <b>나중에 +10</b>. 한 스텝만 보면 A가 좋아 보이지만, <b>전체 보상의 합</b>을 보면 얘기가 달라요.</p>
+    <div class="twocol">
+      <div class="colbox"><h4 style="color:var(--q);margin:0 0 4px">계획 A · 당장 챙기기</h4>
+        <div class="tl" id="tlA"></div>
+        <div style="margin-top:10px">보상 합 = <span class="big" style="color:var(--q)" id="sumA"></span></div></div>
+      <div class="colbox"><h4 style="color:var(--good);margin:0 0 4px">계획 B · 기다렸다 크게</h4>
+        <div class="tl" id="tlB"></div>
+        <div style="margin-top:10px">보상 합 = <span class="big" style="color:var(--good)" id="sumB"></span></div></div>
+    </div>
+    <p class="note" style="margin-top:16px">→ 미래 보상까지 <b>더해야</b> 진짜 좋은 계획이 보여요(여기선 B). 이 합을 <b>리턴(return)</b> 이라 불러요. 그런데 — 먼 미래의 +10을 지금의 +10과 똑같이 쳐줘도 될까요? 다음 스텝.</p>
+  </section>
+
+  <!-- STEP 1 -->
+  <section class="panel" data-panel="1">
+    <span class="kicker" style="color:var(--q)">Step 01 — The Discount γ</span>
+    <h2>미래일수록 조금씩 깎는다</h2>
+    <p class="lead">"지금 받는 보상 1점"은 온전히 1점, "<b>t스텝 뒤</b> 1점"은 <b>γ를 t번 곱한</b> 만큼만 쳐줘요(γ는 0~1). γ가 작으면 코앞만 보고, 1에 가까우면 먼 미래까지 봐요. 슬라이더를 움직여 가중치가 어떻게 변하는지 보세요.</p>
+    <div class="ctrl"><label>할인율 γ</label><input type="range" id="g" min="0" max="99" value="90"><span class="val" id="gv">0.90</span></div>
+    <div id="weights" style="margin-top:8px"></div>
+    <div class="callout q" style="margin-top:12px" id="ginfo"></div>
+    <p class="note" style="margin-top:10px">→ "유효 지평선"(대략 몇 스텝 앞까지 신경 쓰는가) ≈ <b>1/(1−γ)</b>. γ=0.9면 ~10스텝, γ=0.99면 ~100스텝. γ&lt;1이면 무한히 이어져도 합이 <b>발산하지 않아요</b>.</p>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="panel" data-panel="2">
+    <span class="kicker" style="color:var(--v)">Step 02 — γ Changes Behavior</span>
+    <h2>같은 길, γ만 바꿔도 가는 곳이 달라진다</h2>
+    <p class="lead">왼쪽 가까이 <b>🪙 +3</b>, 오른쪽 멀리 <b>💎 +10</b>. γ가 작으면 멀리 있는 큰 보상이 너무 깎여서 <b>가까운 작은 보상</b>으로 가고(근시안), γ가 크면 <b>먼 큰 보상</b>을 노려요(원시안). 화살표는 실제로 계산한 최적 정책이에요.</p>
+    <div class="ctrl"><label>할인율 γ</label><input type="range" id="g2" min="50" max="99" value="70"><span class="val" id="g2v">0.70</span></div>
+    <div id="strip2" style="margin-top:8px"></div>
+    <div class="legend" style="margin-top:8px">화살표 = 그 칸에서 출발할 때의 최적 행동 · 칸 색 = 가치(초록↑, 보상 칸 제외) · 🪙 +3(가까움) · 💎 +10(멀리)</div>
+    <div class="callout v" style="margin-top:14px" id="info2"></div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="panel" data-panel="3">
+    <span class="kicker" style="color:var(--good)">Step 03 — Recap</span>
+    <h2>리턴 = 깎아서 더한 미래 보상</h2>
+    <div class="callout good" style="margin-top:6px">
+      <div class="ttl">리턴(return) Gₜ</div>
+      <p style="margin:0 0 8px">Gₜ = Rₜ₊₁ + γRₜ₊₂ + γ²Rₜ₊₃ + … — 지금부터 받을 보상을 <b>γ로 깎아가며</b> 모두 더한 값. RL은 이 <b>기대 리턴</b>을 최대로 해요.</p>
+      <p style="margin:0">γ의 두 얼굴: <b>수학적</b>으로는 무한 합을 유한하게 만들고(γ&lt;1), <b>의미적</b>으로는 "얼마나 멀리 보는가"(근시안↔원시안)를 정해요.</p>
+    </div>
+    <div class="twocol" style="margin-top:14px">
+      <div class="colbox"><h4 style="color:var(--hot);margin:0 0 6px">에피소드형 (끝이 있음)</h4>
+        <p class="note">미로 탈출·게임 한 판처럼 <b>종료</b>가 있는 과제. γ=1도 가능(합이 유한).</p></div>
+      <div class="colbox"><h4 style="color:var(--q);margin:0 0 6px">연속형 (끝이 없음)</h4>
+        <p class="note">로봇 제어·서버 운영처럼 <b>계속</b>되는 과제. γ&lt;1로 깎아야 합이 발산 안 해요.</p></div>
+    </div>
+    <p class="note" style="margin-top:16px">→ 이제 "리턴"이라는 목표가 또렷해졌어요. 다음 <b>5장</b>에서 "각 상태/행동의 <b>가치</b>(거기서 시작하면 받을 기대 리턴)"를 다뤄요.</p>
+  </section>
+
+  <p class="foot">// 수식 없는 직관 입문 · 모든 가치·정책은 브라우저에서 실시간 계산 · <a href="index.html">목차</a></p>
+</div>
+
+<script src="shared/lib.js"></script>
+<script>
+VZ.mountTopnav('#topnav', 'CH 04 · 할인율');
+VZ.setupStepper();
+const RL = VZ.RL;
+
+// ---------- STEP 0 : 미래까지 더하기 ----------
+(function(){
+  const A=[5,0,0,0,0], B=[0,0,0,0,10];
+  function tl(arr){ return arr.map((r,t)=>
+    `<div class="step"><div class="box" style="${r>0?'border-color:var(--good);color:var(--good)':'color:var(--faint)'}">${r>0?'+'+r:'0'}</div><div class="t">t=${t}</div></div>`).join(''); }
+  document.getElementById('tlA').innerHTML=tl(A);
+  document.getElementById('tlB').innerHTML=tl(B);
+  document.getElementById('sumA').textContent='+'+A.reduce((a,b)=>a+b,0);
+  document.getElementById('sumB').textContent='+'+B.reduce((a,b)=>a+b,0);
+})();
+
+// ---------- STEP 1 : 할인율 가중치 ----------
+(function(){
+  let g=0.90; const N=8;
+  function render(){
+    let html='';
+    for(let t=0;t<N;t++){ const w=Math.pow(g,t);
+      html += VZ.barRow(`${t}스텝 뒤`, w, {color:'var(--q)', pctText:'×'+w.toFixed(2)}); }
+    document.getElementById('weights').innerHTML=html;
+    const G=(1-Math.pow(g,N))/(1-g);           // 매 스텝 +1, 8스텝까지의 유한 합
+    const horizon = 1/(1-g);                    // 끝없이 받을 때의 합(= 유효 지평선)
+    document.getElementById('ginfo').innerHTML =
+      `<div class="ttl" style="color:var(--q)">γ = ${g.toFixed(2)}</div>
+       <p style="margin:0">매 스텝 +1이라면 — <b>8스텝까지</b> 받은 리턴 ≈ <b>${G.toFixed(2)}</b>, <b>끝없이</b> 받는다면 ≈ 1/(1−γ) = <b>${horizon.toFixed(1)}</b>(≈ 유효 지평선). ${g<0.5?'코앞만 봐요(근시안).':g>0.95?'아주 먼 미래까지 봐요(원시안).':'적당히 멀리 봐요.'}</p>`;
+  }
+  document.getElementById('g').oninput=e=>{ g=e.target.value/100; document.getElementById('gv').textContent=g.toFixed(2); render(); };
+  render();
+})();
+
+// ---------- STEP 2 : γ가 행동을 바꾼다 (1D VI) ----------
+(function(){
+  const N=7; let g=0.70;
+  const goals={0:{emoji:'🪙',col:'var(--hot)'}, 6:{emoji:'💎',col:'var(--good)'}};
+  const term=s=>s===0||s===6;
+  const reward=s=> s===0?3 : s===6?10 : 0;          // 끝에서만 보상, 걸음 비용 0
+  function vi(){
+    let V=Array(N).fill(0);
+    for(let it=0;it<400;it++){ const nV=V.slice();
+      for(let s=0;s<N;s++){ if(term(s)){nV[s]=0;continue;} let best=-Infinity;
+        for(const a of [2,3]){ const s2=a===2?Math.max(0,s-1):Math.min(N-1,s+1);
+          const val=reward(s2)+(term(s2)?0:g*V[s2]); if(val>best)best=val; } nV[s]=best; } V=nV; }
+    const pol=Array(N).fill(null);
+    for(let s=0;s<N;s++){ if(term(s))continue; let best=-Infinity,ba=null;
+      for(const a of [2,3]){ const s2=a===2?Math.max(0,s-1):Math.min(N-1,s+1);
+        const val=reward(s2)+(term(s2)?0:g*V[s2]); if(val>best){best=val;ba=a;} } pol[s]=ba; }
+    return {V,pol};
+  }
+  function render(){
+    const {V,pol}=vi();
+    document.getElementById('strip2').innerHTML = RL.stripSVG(N, {V, policy:pol, goals, showVals:true});
+    // 각 칸이 정책을 따라가면 실제로 어디(🪙/💎)에 도달하는지 추적
+    const dest=s=>{ let cur=s,k=0; while(!term(cur)&&k<50){ cur = pol[cur]===2?cur-1:cur+1; k++; } return cur; };
+    let coin=0, gem=0; for(let s=1;s<=5;s++){ const d=dest(s); if(d===0)coin++; else if(d===6)gem++; }
+    document.getElementById('info2').innerHTML =
+      `<div class="ttl">γ = ${g.toFixed(2)} → ${coin>0?`일부(${coin}칸)는 🪙로 — 근시안`:'전부 💎로 — 원시안'}</div>
+       <p style="margin:0">🪙(가까운 +3)로 도달하는 칸 ${coin}개, 💎(먼 +10)로 도달하는 칸 ${gem}개. γ를 낮추면 먼 💎이 깎여 가까운 🪙를 택하는 칸이 늘어요.</p>`;
+  }
+  document.getElementById('g2').oninput=e=>{ g=e.target.value/100; document.getElementById('g2v').textContent=g.toFixed(2); render(); };
+  render();
+})();
+</script>
+</body>
+</html>

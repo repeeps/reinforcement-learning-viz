@@ -389,7 +389,31 @@
     return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="강화학습 그리드월드 — 로봇이 보상으로 목표까지 길을 학습하는 격자 (초록=가치 높음, 빨강=낮음, 화살표=정책)" style="max-width:100%;display:block">${defs}${cells}${overlay}</svg>`;
   }
 
-  VZ.RL = { ACT, keyOf, argmax, asPits, isWall, isGoal, isPit, isTerminal, stepState, valColor, gridSVG };
+  // 1차원 띠 렌더러 (가치 색·정책 화살표·보물/목표·에이전트). 04·05장 등 공유.
+  function stripSVG(n, opts = {}) {
+    const cell = opts.cell || 54, pad = 12, W = n * cell + pad * 2, H = cell + pad * 2;
+    const V = opts.V || null; let vmax = opts.vmax;
+    if (V && vmax == null) { vmax = 0; for (const v of V) if (isFinite(v)) vmax = Math.max(vmax, Math.abs(v)); vmax = vmax || 1; }
+    const defs = `<defs><marker id="rlStripArw" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--hot)"/></marker></defs>`;
+    let cells = '', over = ''; const goals = opts.goals || {};
+    for (let c = 0; c < n; c++) {
+      const x = pad + c * cell, y = pad, g = goals[c];
+      const fill = g ? `color-mix(in srgb, ${g.col || 'var(--good)'} 38%, var(--panel-2))` : (V ? valColor(V[c], vmax) : 'var(--panel-2)');
+      cells += `<rect x="${x + 1}" y="${y + 1}" width="${cell - 2}" height="${cell - 2}" rx="8" fill="${fill}" stroke="var(--line)"/>`;
+      if (g) over += `<text x="${x + cell / 2}" y="${y + cell / 2 + 8}" text-anchor="middle" font-size="22">${g.emoji}</text>`;
+      else {
+        if (opts.showVals && V) over += `<text x="${x + cell / 2}" y="${y + 14}" text-anchor="middle" fill="var(--muted)" font-size="9" font-family="JetBrains Mono">${VZ.fmt(V[c], 2)}</text>`;
+        if (opts.policy && opts.policy[c] != null) {
+          const a = opts.policy[c], dc = ACT[a].dc, cx = x + cell / 2, cy = y + cell / 2 + (opts.showVals ? 7 : 0), L = cell * 0.22;
+          over += `<line x1="${cx - dc * L}" y1="${cy}" x2="${cx + dc * L}" y2="${cy}" stroke="var(--hot)" stroke-width="2.5" marker-end="url(#rlStripArw)"/>`;
+        }
+      }
+    }
+    if (opts.agent != null) { const x = pad + opts.agent * cell + cell / 2, y = pad + cell / 2; over += `<text x="${x}" y="${y + 9}" text-anchor="middle" font-size="26">🤖</text>`; }
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="1차원 길" style="max-width:100%;display:block">${defs}${cells}${over}</svg>`;
+  }
+
+  VZ.RL = { ACT, keyOf, argmax, asPits, isWall, isGoal, isPit, isTerminal, stepState, valColor, gridSVG, stripSVG };
 })(window);
 
 /* ============================================================
