@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>13 Actor-Critic · 강화학습, 눈으로 보기</title>
+<link rel="stylesheet" href="shared/theme.css">
+<style>
+  .gridwrap{display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;}
+  .legend{font-size:12px; color:var(--faint); line-height:1.7; font-family:'JetBrains Mono',monospace;}
+  .ac{display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; justify-content:center; margin:8px 0;}
+  .ac .role{flex:1; min-width:200px; background:var(--panel-2); border:1px solid var(--line); border-radius:14px; padding:14px;}
+  .ac .role h4{margin:0 0 6px; font-size:15px;}
+  .ac .mid{display:flex; align-items:center; color:var(--faint); font-size:24px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topnav" id="topnav"></div>
+
+  <header>
+    <div class="tag">PART 4 · Chapter 13</div>
+    <h1>Actor-Critic — 행동하는 배우 + 평가하는 비평가</h1>
+    <p class="intro">정책경사(12장)는 정책을 직접 배우지만 <b>분산이 컸어요</b>(끝까지의 리턴으로 밀어서). 가치 기반은 안정적이지만 정책을 간접적으로 다뤘죠. <b>Actor-Critic</b>은 둘을 합쳐요 — <b>Actor</b>(정책)가 행동하고, <b>Critic</b>(가치)이 "방금 그거 예상보다 좋았어/나빴어"라고 즉시 평가해 Actor를 부드럽게 이끌어요. 현대 RL의 토대예요.</p>
+  </header>
+
+  <nav class="stepper" id="stepper">
+    <button data-s="0" class="active">00 · 둘을 합치다</button>
+    <button data-s="1">01 · 두 역할</button>
+    <button data-s="2">02 · 함께 학습</button>
+    <button data-s="3">03 · 정리</button>
+  </nav>
+
+  <!-- STEP 0 -->
+  <section class="panel show" data-panel="0">
+    <span class="kicker" style="color:var(--hot)">Step 00 — Best of Both</span>
+    <h2>정책경사의 분산을, 가치로 잡는다</h2>
+    <p class="lead">12장 끝에서 봤죠 — 정책경사는 "평균보다 좋았나"(baseline)로 분산을 줄였어요. 그 baseline을 <b>학습된 가치함수</b>로 두면 훨씬 똑똑한 기준이 돼요. 그게 Actor-Critic의 출발이에요.</p>
+    <div class="callout" style="margin-top:6px">
+      <p style="margin:0 0 8px"><b style="color:var(--v)">Actor(배우)</b> = 정책 π. 각 상태에서 행동을 골라요(정책경사로 학습).</p>
+      <p style="margin:0 0 8px"><b style="color:var(--q)">Critic(비평가)</b> = 가치 V. "이 상태가 얼마나 좋은지" 추정해요(TD로 학습, 9장).</p>
+      <p style="margin:0"><b style="color:var(--hot)">협업</b>: Critic이 매 걸음 <b>TD 오차 δ</b>("실제 결과 − 예상")를 계산 → Actor는 δ가 양수면 "예상보다 좋았네!" 그 행동 확률을 올려요. 끝까지 안 기다리고, <b>매 걸음</b> 평가받죠.</p>
+    </div>
+    <p class="note" style="margin-top:14px">→ Critic이 "즉석 코치"가 되어 Actor에게 매 걸음 피드백을 줘요. MC 리턴(출렁임) 대신 Critic의 δ(안정)를 쓰니 <b>분산이 작고 온라인</b>이에요. (대신 Critic 추정이 초기엔 부정확해 약간의 <b>편향</b>이 생겨요 — 9장의 분산↓ vs 편향↑ 맞바꿈이고, 학습이 진행되며 줄어요.)</p>
+  </section>
+
+  <!-- STEP 1 -->
+  <section class="panel" data-panel="1">
+    <span class="kicker" style="color:var(--q)">Step 01 — Two Roles</span>
+    <h2>δ 하나로 둘이 동시에 배운다</h2>
+    <div class="ac">
+      <div class="role"><h4 style="color:var(--v)">🎭 Actor (정책 π)</h4>
+        <p class="note" style="margin:0">상태를 보고 행동 확률을 출력. δ&gt;0이면 방금 한 행동의 확률을 <b>올리고</b>, δ&lt;0이면 <b>내려요</b>.</p></div>
+      <div class="mid">↔</div>
+      <div class="role"><h4 style="color:var(--q)">📊 Critic (가치 V)</h4>
+        <p class="note" style="margin:0">상태의 가치를 추정. TD 오차 <b>δ = r + γV(s′) − V(s)</b> 로 자신도 갱신하고, 그 δ를 Actor에게 넘겨요.</p></div>
+    </div>
+    <div class="callout q" style="margin-top:10px">
+      <div class="ttl">TD 오차 δ = "놀람의 크기"</div>
+      <p style="margin:0">δ = (실제 받은 보상 + 다음 상태 가치) − (예상했던 가치). <b>δ&gt;0</b> = "예상보다 좋았다"(기분 좋은 놀람) → 그 행동 강화. <b>δ&lt;0</b> = "예상보다 나빴다" → 그 행동 억제. Critic의 평가가 Actor의 학습 신호가 돼요.</p>
+    </div>
+    <p class="note" style="margin-top:14px">→ 9장의 TD 오차가 여기서 <b>Actor의 길잡이</b>로 재등장해요. 가치(Critic)와 정책(Actor)이 같은 δ로 동시에 좋아져요.</p>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="panel" data-panel="2">
+    <span class="kicker" style="color:var(--v)">Step 02 — Learning Together</span>
+    <h2>정책과 가치가 함께 또렷해진다</h2>
+    <p class="lead">격자월드에서 Actor-Critic을 돌려요. <b>화살표</b>(Actor의 정책)와 <b>색</b>(Critic의 가치)이 에피소드가 쌓이며 같이 선명해져요. 보상 곡선도 올라가죠. (탐험은 Actor의 확률적 정책 자체가 해줘요 — ε-greedy 불필요.)</p>
+    <div class="row" style="gap:8px;margin-bottom:8px">
+      <button class="btn" id="e10">+10 에피소드</button><button class="btn" id="e100">+100</button>
+      <button class="btn" id="reset2" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">↺ 리셋</button>
+    </div>
+    <div class="gridwrap">
+      <div><div id="gw2"></div>
+        <div class="legend" style="margin-top:8px">색=Critic의 가치 V · 화살표=Actor의 정책(가장 확률 큰 행동) · ⭐+1 🕳️−1 걸음−0.04</div></div>
+      <div style="flex:1;min-width:230px">
+        <div id="info2" class="callout v"></div>
+        <div class="chart-wrap" id="chart2" style="margin-top:10px"></div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:14px">→ 한 번의 δ로 Critic(가치)과 Actor(정책)가 <b>동시에</b> 갱신돼요. 가치 기반의 안정성 + 정책 기반의 유연성을 한 몸에 가진 셈이죠.</p>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="panel" data-panel="3">
+    <span class="kicker" style="color:var(--good)">Step 03 — Recap</span>
+    <h2>현대 강화학습의 토대</h2>
+    <div class="callout good" style="margin-top:6px">
+      <div class="ttl">Actor-Critic 한 줄 요약</div>
+      <p style="margin:0"><b>Actor</b>(정책경사)가 행동하고, <b>Critic</b>(TD 가치)이 δ로 평가해 Actor를 이끌어요. 정책 기반의 유연함 + 가치 기반의 낮은 분산을 결합 — 그래서 <b>연속 행동·복잡한 문제</b>에 강하고 안정적이에요.</p>
+    </div>
+    <div class="callout" style="margin-top:14px">
+      <p style="margin:0">실전 딥RL의 주력들 — <b>A2C·A3C·PPO·SAC</b> 같은 알고리즘이 모두 Actor-Critic 구조 위에 세워졌어요. 로봇 제어, 게임(스타크래프트 등), 그리고 <b>LLM의 RLHF</b>에 주로 쓰이는 PPO가 Actor-Critic 계열이에요(14장에서).</p>
+    </div>
+    <p class="note" style="margin-top:16px">→ 여기까지가 RL의 <b>핵심 알고리즘</b>이에요. 마지막 <b>14장</b>에서 이 모든 게 실제로 어디에 쓰이는지(게임·로봇·RLHF), 그리고 행동설계(FSM·BT)와 언제 무엇을 쓸지 큰 그림을 봐요.</p>
+  </section>
+
+  <p class="foot">// 수식 없는 직관 입문 · Actor-Critic 학습은 브라우저에서 실시간 계산 · <a href="index.html">목차</a></p>
+</div>
+
+<script src="shared/lib.js"></script>
+<script>
+VZ.mountTopnav('#topnav', 'CH 13 · Actor-Critic');
+VZ.setupStepper();
+const RL = VZ.RL;
+
+// ---------- STEP 2 : Actor-Critic 그리드월드 ----------
+(function(){
+  const env={rows:4,cols:4,goal:[0,3],pit:[1,3],start:[3,0]}, GAMMA=0.9, STEP=-0.04, AA=0.3, AC=0.3;
+  const reward=(r,c)=> RL.isGoal(env,r,c)?1 : RL.isPit(env,r,c)?-1 : STEP;
+  const K=(r,c)=>r+','+c;
+  let H, V, eps, ret, hist;
+  function reset(){ H={}; V={}; for(let r=0;r<4;r++)for(let c=0;c<4;c++){H[K(r,c)]=[0,0,0,0];V[K(r,c)]=0;} eps=0; ret=[]; hist=[]; render(); info('▶ +10 / +100으로 Actor와 Critic을 함께 학습시켜 보세요.'); }
+  function episode(){
+    let [r,c]=env.start, steps=0, R=0;
+    while(!RL.isTerminal(env,r,c) && steps<60){
+      const p=VZ.softmax(H[K(r,c)]); let x=Math.random(), a=0, acc=0; for(let i=0;i<4;i++){ acc+=p[i]; if(x<acc){a=i;break;} }
+      const [nr,nc]=RL.stepState(env,r,c,a); const rw=reward(nr,nc); R+=rw;
+      const delta = rw + (RL.isTerminal(env,nr,nc)?0:GAMMA*V[K(nr,nc)]) - V[K(r,c)];
+      V[K(r,c)] += AC*delta;                                  // Critic 갱신
+      for(let i=0;i<4;i++) H[K(r,c)][i] += AA*delta*((i===a?1:0)-p[i]);  // Actor 갱신
+      r=nr;c=nc;steps++;
+    }
+    eps++; ret.push(R);
+    if(eps<=40 || eps%5===0){ const w=ret.slice(-10); hist.push([eps, w.reduce((a,b)=>a+b,0)/w.length]); }
+  }
+  function Vgrid(){ const g=[]; for(let r=0;r<4;r++){g.push([]);for(let c=0;c<4;c++){g[r].push(RL.isTerminal(env,r,c)?0:V[K(r,c)]);}} return g; }
+  function polGrid(){ const g=[]; for(let r=0;r<4;r++){g.push([]);for(let c=0;c<4;c++){
+    if(RL.isTerminal(env,r,c)){g[r].push(null);continue;} const h=H[K(r,c)]; const mx=Math.max(...h),mn=Math.min(...h);
+    g[r].push(mx-mn<0.05?null:h.indexOf(mx)); }} return g; }
+  function render(){
+    document.getElementById('gw2').innerHTML = RL.gridSVG(env,{cell:60, V:Vgrid(), policy:polGrid(), showVals:true});
+    if(hist.length>1) document.getElementById('chart2').innerHTML = VZ.linePlot([{pts:hist,color:'var(--v)',label:'보상'}],{W:300,H:160,xlab:'에피소드',ylab:'평균 보상',legend:false});
+    else document.getElementById('chart2').innerHTML='';
+  }
+  function info(m){ document.getElementById('info2').innerHTML=`<div class="ttl" style="color:var(--v)">에피소드 ${eps}회</div><p style="margin:0">${m}</p>`; }
+  function add(n){ for(let i=0;i<n;i++) episode(); render(); const last=ret.slice(-10); const avg=last.reduce((a,b)=>a+b,0)/last.length;
+    info(`최근 10판 평균 보상 ≈ <b>${VZ.fmt(avg,2)}</b>. ${eps>=80?'Actor의 정책과 Critic의 가치가 함께 또렷해졌어요!':'화살표(정책)와 색(가치)이 같이 선명해져요.'}`); }
+  document.getElementById('e10').onclick=()=>add(10);
+  document.getElementById('e100').onclick=()=>add(100);
+  document.getElementById('reset2').onclick=reset;
+  reset();
+})();
+</script>
+</body>
+</html>
