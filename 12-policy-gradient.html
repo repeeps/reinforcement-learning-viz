@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>12 정책경사 · 강화학습, 눈으로 보기</title>
+<link rel="stylesheet" href="shared/theme.css">
+<style>
+  .legend{font-size:12px; color:var(--faint); line-height:1.7; font-family:'JetBrains Mono',monospace;}
+  .pbar{display:grid; grid-template-columns:70px 1fr 56px; gap:10px; align-items:center; margin:7px 0;}
+  .pbar .lab{font-weight:700; text-align:right;}
+  .pbar .track{height:22px; border-radius:6px; background:var(--panel-2); border:1px solid var(--line); overflow:hidden;}
+  .pbar .fill{height:100%; background:var(--v); transition:width .3s;}
+  .pbar.best .fill{background:var(--hot);}
+  .pbar .v{font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--muted); text-align:right;}
+  .sliders .ctrl{margin:6px 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topnav" id="topnav"></div>
+
+  <header>
+    <div class="tag">PART 4 · Chapter 12</div>
+    <h1>정책경사 — 정책을 직접 학습하다</h1>
+    <p class="intro">지금까진 <b>가치(Q)</b>를 배워 거기서 정책을 끌어냈어요. 정책경사는 다르게 접근해요: <b>정책 자체</b>(각 행동의 확률)를 파라미터로 두고 <b>직접</b> 끌어올려요. 원리는 단순해요 — <b>좋은 결과를 낸 행동의 확률을 높이고, 나쁜 행동은 낮춘다</b>. 연속 행동·확률적 정책에 강하고, 딥러닝과 잘 맞아요.</p>
+  </header>
+
+  <nav class="stepper" id="stepper">
+    <button data-s="0" class="active">00 · 정책을 직접</button>
+    <button data-s="1">01 · 정책 = 확률</button>
+    <button data-s="2">02 · 좋은 행동 강화</button>
+    <button data-s="3">03 · 정리</button>
+  </nav>
+
+  <!-- STEP 0 -->
+  <section class="panel show" data-panel="0">
+    <span class="kicker" style="color:var(--hot)">Step 00 — Optimize the Policy Directly</span>
+    <h2>가치를 거치지 않고, 정책을 바로 민다</h2>
+    <p class="lead">가치 기반(Q-learning, DQN)은 "각 행동이 얼마나 좋은지" 점수를 매기고 가장 높은 걸 골랐어요. 정책경사는 점수 대신 <b>행동의 확률을 직접</b> 다뤄요.</p>
+    <div class="callout" style="margin-top:6px">
+      <p style="margin:0 0 8px"><b style="color:var(--good)">왜 정책을 직접?</b> ① <b>연속 행동</b>(핸들을 몇 도 꺾을지)엔 "모든 행동의 Q"를 못 매겨요 — 확률분포가 자연스럽죠. ② <b>확률적 정책</b>이 필요한 경우(가위바위보처럼 섞어야 유리). ③ 가치의 작은 변화가 정책을 확 바꾸는 불안정을 피해 <b>부드럽게</b> 학습.</p>
+      <p style="margin:0"><b style="color:var(--q)">핵심 한 줄</b>: 에피소드가 좋았으면(리턴↑) 그때 한 행동들의 확률을 <b>올리고</b>, 나빴으면 내려요. 이게 정책경사(REINFORCE).</p>
+    </div>
+    <p class="note" style="margin-top:14px">→ "좋았던 행동을 더 자주, 나빴던 행동을 덜" — 강아지 훈련(0장)의 직관 그대로예요. 다만 이번엔 <b>확률</b>을 직접 조정하죠.</p>
+  </section>
+
+  <!-- STEP 1 -->
+  <section class="panel" data-panel="1">
+    <span class="kicker" style="color:var(--q)">Step 01 — Policy as Probabilities</span>
+    <h2>정책은 행동들의 확률분포</h2>
+    <p class="lead">각 행동에 <b>선호도(preference)</b> 숫자를 두고, <b>softmax</b>로 확률로 바꿔요. 선호도가 높을수록 확률↑(하지만 부드럽게, 0도 100%도 아닌). 선호도를 움직여 확률이 어떻게 변하는지 보세요.</p>
+    <div class="sliders" id="sliders"></div>
+    <div id="pbars1" style="margin-top:10px"></div>
+    <p class="note" style="margin-top:12px">→ 학습이란 결국 이 <b>선호도</b>를 조정하는 일이에요. softmax 덕에 확률은 항상 합이 1이고 매끄럽게 변해서, "조금씩 밀어 올리는" 경사 학습에 딱 맞아요.</p>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="panel" data-panel="2">
+    <span class="kicker" style="color:var(--v)">Step 02 — Reinforce Good Actions</span>
+    <h2>해보고, 좋았던 행동의 확률을 올린다</h2>
+    <p class="lead">2장의 슬롯머신으로 돌아가요(당첨 확률 숨김). 매 시도: 정책 확률대로 한 기계를 골라 당기고, 받은 보상이 <b>평균보다 높으면</b> 그 기계의 선호도(확률)를 <b>올려</b>요(낮으면 내림). 이게 가장 단순한 정책경사 — 점점 최적 기계로 확률이 쏠려요.</p>
+    <div class="row" style="gap:8px;margin-bottom:8px">
+      <button class="btn" id="s1">+1</button><button class="btn" id="s50">+50</button><button class="btn" id="s500">+500</button>
+      <button class="btn" id="reset2" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">↺ 리셋</button>
+    </div>
+    <div id="pbars2"></div>
+    <div class="legend" style="margin-top:6px">막대 = 정책 확률 π(기계) · ⭐ = 진짜 최적 기계 · 학습할수록 ⭐로 쏠려요</div>
+    <div class="chart-wrap" id="chart2" style="margin-top:10px"></div>
+    <div id="info2" class="callout v" style="margin-top:12px"></div>
+    <p class="note" style="margin-top:12px">→ <b>행동별 가치표(Q)</b> 없이 확률을 직접 밀어 올려 최적에 도달해요. 다만 "평균보다 좋았나"의 기준선(baseline)으로 <b>전체 평균보상 하나</b>는 추정해 쓰는데, 이게 분산을 줄이는 안정학습의 비결이에요(행동별 가치는 아니에요). 참고로 기준선을 더한 이 방식의 정식 명칭이 'baseline 있는 REINFORCE'이고, 그래디언트 밴딧이 그 1-상태(단일 상황) 버전이에요.</p>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="panel" data-panel="3">
+    <span class="kicker" style="color:var(--good)">Step 03 — Recap</span>
+    <h2>가치 기반 vs 정책 기반</h2>
+    <div class="twocol" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="callout q"><div class="ttl">가치 기반 (Q-learning·DQN)</div><p style="margin:0">Q를 배워 argmax로 행동. 이산 행동·표본효율 좋음. 연속 행동·확률 정책엔 약함.</p></div>
+      <div class="callout v"><div class="ttl">정책 기반 (정책경사)</div><p style="margin:0">정책 확률을 직접 학습. <b>연속·확률적 행동</b>에 강함. 대신 <b>분산이 큼</b>(리턴으로 밀어서).</p></div>
+    </div>
+    <div class="callout k" style="margin-top:14px">
+      <div class="ttl">정책경사의 약점: 큰 분산</div>
+      <p style="margin:0">리턴(전체 보상)으로 확률을 미는데, 리턴이 출렁이면(8장 MC처럼) 학습도 출렁여요. 해결책: "평균보다 얼마나 좋았나"(<b>baseline</b>)로 기준을 잡아 분산을 줄여요 — 위 데모에서 쓴 그 baseline이에요.</p>
+    </div>
+    <p class="note" style="margin-top:16px">→ baseline을 <b>학습된 가치함수</b>로 두면? 정책(actor)과 가치(critic)를 합친 게 다음 <b>13장 Actor-Critic</b>이에요 — 두 접근의 좋은 점을 합쳐요.</p>
+  </section>
+
+  <p class="foot">// 수식 없는 직관 입문 · 모든 정책 학습은 브라우저에서 실시간 계산 · <a href="index.html">목차</a></p>
+</div>
+
+<script src="shared/lib.js"></script>
+<script>
+VZ.mountTopnav('#topnav', 'CH 12 · 정책경사');
+VZ.setupStepper();
+
+// ---------- STEP 1 : softmax 정책 ----------
+(function(){
+  const NAME=['A','B','C'], COL=['var(--q)','var(--v)','var(--good)'];
+  let H=[0.5,0,-0.5];
+  // DOM은 한 번만 생성(드래그 중 포커스 끊김 방지) — 입력 시 값만 갱신
+  document.getElementById('sliders').innerHTML = NAME.map((nm,i)=>
+    `<div class="ctrl"><label>행동 ${nm} 선호도</label><input type="range" data-i="${i}" min="-30" max="30" value="${Math.round(H[i]*10)}"><span class="val" data-i="${i}">${H[i].toFixed(1)}</span></div>`).join('');
+  document.getElementById('pbars1').innerHTML = NAME.map((nm,i)=>
+    `<div class="pbar"><div class="lab" style="color:${COL[i]}">행동 ${nm}</div>
+      <div class="track"><div class="fill" data-i="${i}" style="background:${COL[i]}"></div></div>
+      <div class="v" data-i="${i}"></div></div>`).join('');
+  function update(){
+    const pi=VZ.softmax(H);
+    NAME.forEach((nm,i)=>{
+      document.querySelector(`#pbars1 .fill[data-i="${i}"]`).style.width=(pi[i]*100).toFixed(0)+'%';
+      document.querySelector(`#pbars1 .v[data-i="${i}"]`).textContent=(pi[i]*100).toFixed(0)+'%';
+      document.querySelector(`#sliders .val[data-i="${i}"]`).textContent=H[i].toFixed(1);
+    });
+  }
+  document.getElementById('sliders').querySelectorAll('input').forEach(s=>s.oninput=e=>{ H[+e.target.dataset.i]=e.target.value/10; update(); });
+  update();
+})();
+
+// ---------- STEP 2 : 그래디언트 밴딧 (REINFORCE) ----------
+(function(){
+  const TRUE=[0.3,0.7,0.45], BEST=1, NAME=['A','B','C'], n=3, ALPHA=0.1;
+  let H, baseline, cnt, steps, hist;
+  function reset(){ H=[0,0,0]; baseline=0; cnt=0; steps=0; hist=[]; render(); info('정책은 처음엔 균등(33%씩). +50, +500을 눌러 학습시켜 보세요.'); }
+  function pi(){ return VZ.softmax(H); }
+  function step(){
+    const p=pi(); let r=Math.random(), a=0, acc=0; for(let i=0;i<n;i++){ acc+=p[i]; if(r<acc){a=i;break;} }
+    const R = Math.random()<TRUE[a] ? 1 : 0; cnt++; baseline += (R-baseline)/cnt;
+    for(let i=0;i<n;i++) H[i] += ALPHA*(R-baseline)*((i===a?1:0)-p[i]);   // 정책경사 갱신
+    steps++;
+    if(steps<=40 || steps%10===0) hist.push([steps, VZ.softmax(H)[BEST]]);
+  }
+  function render(){
+    const p=pi();
+    document.getElementById('pbars2').innerHTML = NAME.map((nm,i)=>
+      `<div class="pbar ${i===BEST?'best':''}"><div class="lab">기계 ${nm}${i===BEST?' ⭐':''}</div>
+        <div class="track"><div class="fill" style="width:${(p[i]*100).toFixed(0)}%"></div></div>
+        <div class="v">${(p[i]*100).toFixed(0)}%</div></div>`).join('');
+    if(hist.length>1) document.getElementById('chart2').innerHTML = VZ.linePlot([{pts:hist,color:'var(--hot)',label:'최적확률'}],
+      {W:520,H:170,xlab:'시도',ymin:0,ymax:1,legend:false,hline:{y:1,label:'100%'}});
+    else document.getElementById('chart2').innerHTML='';
+  }
+  function info(m){ document.getElementById('info2').innerHTML=`<div class="ttl" style="color:var(--v)">시도 ${steps}회</div><p style="margin:0">${m}</p>`; }
+  function add(k){ for(let i=0;i<k;i++) step(); render();
+    const pb=Math.round(pi()[BEST]*100);
+    info(`최적 기계 <b>B ⭐</b> 선택 확률 = <b>${pb}%</b>. ${pb>85?'정책이 최적으로 거의 수렴했어요!':'시도가 쌓이며 ⭐ 쪽으로 확률이 올라가요.'}`); }
+  document.getElementById('s1').onclick=()=>add(1);
+  document.getElementById('s50').onclick=()=>add(50);
+  document.getElementById('s500').onclick=()=>add(500);
+  document.getElementById('reset2').onclick=reset;
+  reset();
+})();
+</script>
+</body>
+</html>
