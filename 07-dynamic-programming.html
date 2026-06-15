@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>07 동적계획법 · 강화학습, 눈으로 보기</title>
+<link rel="stylesheet" href="shared/theme.css">
+<style>
+  .gridwrap{display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;}
+  .legend{font-size:12px; color:var(--faint); line-height:1.7; font-family:'JetBrains Mono',monospace;}
+  .phase{display:inline-block; font-family:'JetBrains Mono',monospace; font-size:11px; padding:3px 9px; border-radius:7px; margin-right:6px;}
+  .phase.on{background:var(--hot); color:#1a1304; font-weight:700;}
+  .phase.off{background:var(--panel-2); color:var(--muted); border:1px solid var(--line);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topnav" id="topnav"></div>
+
+  <header>
+    <div class="tag">PART 2 · Chapter 07</div>
+    <h1>동적계획법 — 벨만을 알고리즘으로</h1>
+    <p class="intro">환경(전이·보상)을 <b>완전히 알 때</b>, 벨만 백업을 반복하면 최적 가치와 정책을 <b>직접 계산</b>할 수 있어요. 이걸 동적계획법(DP)이라 해요. 두 대표 방법 — <b>가치반복</b>과 <b>정책반복</b> — 을 직접 돌려봐요. (둘 다 "모델을 안다"가 전제예요.)</p>
+  </header>
+
+  <nav class="stepper" id="stepper">
+    <button data-s="0" class="active">00 · 계획이란</button>
+    <button data-s="1">01 · 가치반복</button>
+    <button data-s="2">02 · 정책반복</button>
+    <button data-s="3">03 · 정리</button>
+  </nav>
+
+  <!-- STEP 0 -->
+  <section class="panel show" data-panel="0">
+    <span class="kicker" style="color:var(--hot)">Step 00 — Planning</span>
+    <h2>지도를 다 알면, 풀어버릴 수 있다</h2>
+    <p class="lead">전이 확률 P와 보상 R을 <b>안다</b>면(=환경의 "지도"가 손에 있다면), 시행착오 없이 책상 위에서 최적 정책을 <b>계산</b>할 수 있어요. 이게 <b>계획(planning)</b>이에요. 그 도구가 동적계획법.</p>
+    <div class="callout" style="margin-top:6px">
+      <p style="margin:0 0 8px"><b style="color:var(--good)">핵심 아이디어</b>: 6장의 벨만 백업 <span class="mono">V(s) ← maxₐ[r + γV(s')]</span> 을 <b>모든 칸에 반복 적용</b>하면 가치가 정답으로 수렴해요. 그 가치에서 탐욕적으로 행동을 고르면 최적 정책.</p>
+      <p style="margin:0">DP의 두 방식: <b style="color:var(--q)">가치반복</b>(가치를 반복 백업) · <b style="color:var(--v)">정책반복</b>(정책 평가↔개선을 번갈아). 둘 다 같은 최적해로 가요.</p>
+    </div>
+    <p class="note" style="margin-top:14px">→ "모델을 안다"가 한계예요. 현실은 보통 모델을 몰라서 직접 부딪혀 배워야 하죠(8장부터). 하지만 DP는 모든 RL 알고리즘의 <b>원형</b>이에요.</p>
+  </section>
+
+  <!-- STEP 1 -->
+  <section class="panel" data-panel="1">
+    <span class="kicker" style="color:var(--q)">Step 01 — Value Iteration</span>
+    <h2>가치반복: 가치를 반복 백업</h2>
+    <p class="lead">6장에서 본 백업을, 이번엔 <b>수렴을 곡선(maxΔ)으로 재고 최적 정책까지 뽑아요</b>. 모든 칸을 0에서 시작해 매 스윕마다 <b>maxₐ[r+γV(s')]</b> 백업을 적용 → 변화량이 0에 가까워지면 수렴, 그 가치에서 가장 좋은 행동이 최적 정책(화살표)이에요.</p>
+    <div class="row" style="gap:8px;margin-bottom:8px">
+      <button class="btn" id="vi1">▶ 한 스윕</button>
+      <button class="btn" id="viConv">▶▶ 수렴까지</button>
+      <button class="btn" id="viReset" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">↺ 리셋</button>
+    </div>
+    <div class="gridwrap">
+      <div><div id="gwVI"></div>
+        <div class="legend" style="margin-top:8px">숫자=V · 화살표=현재 가치 기준 최적 행동(값 차이가 생긴 칸만) · 동률이면 한 방향만 표시(최적 정책이 여럿일 수 있어요)</div></div>
+      <div style="flex:1;min-width:230px">
+        <div id="infoVI" class="callout q"></div>
+        <div class="chart-wrap" id="viChart" style="margin-top:10px"></div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:14px">→ 변화량이 스윕마다 <b>빠르게 줄어</b>(대략 γ배씩) 금세 수렴해요. 가치반복은 평가와 개선을 한 번의 max 백업에 <b>합친</b> 셈이에요.</p>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="panel" data-panel="2">
+    <span class="kicker" style="color:var(--v)">Step 02 — Policy Iteration</span>
+    <h2>정책반복: 평가하고, 개선하고, 반복</h2>
+    <p class="lead">다른 길도 있어요. ① <b>정책평가</b>: 지금 정책의 가치 V<sup>π</sup>를 끝까지 계산. ② <b>정책개선</b>: 그 가치 기준으로 더 좋은 행동으로 정책을 갈아끼움. 이 둘을 번갈으면 <b>몇 라운드 만에</b> 최적에 도달해요. 엉성한 정책(전부 ↑)에서 출발해보세요.</p>
+    <div class="row" style="gap:8px;margin-bottom:6px">
+      <button class="btn" id="piEval">① 정책평가</button>
+      <button class="btn" id="piImp">② 정책개선</button>
+      <button class="btn" id="piAuto">▶▶ 자동</button>
+      <button class="btn" id="piReset" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">↺ 리셋</button>
+    </div>
+    <div style="margin-bottom:8px"><span class="phase" id="phE">① 평가</span><span class="phase" id="phI">② 개선</span></div>
+    <div class="gridwrap">
+      <div><div id="gwPI"></div>
+        <div class="legend" style="margin-top:8px">화살표=현재 정책 π · 숫자=그 정책의 가치 V<sup>π</sup></div></div>
+      <div style="flex:1;min-width:230px"><div id="infoPI" class="callout v"></div></div>
+    </div>
+    <p class="note" style="margin-top:14px">→ 개선해도 정책이 <b>안 바뀌면</b> 그게 최적(더 나은 행동이 없다는 뜻). 정책반복은 보통 <b>적은 라운드</b>로 끝나지만, 매 평가가 비싸요. 가치반복은 평가를 짧게(한 스윕) 치는 대신 더 많이 돌고요 — 트레이드오프예요.</p>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="panel" data-panel="3">
+    <span class="kicker" style="color:var(--good)">Step 03 — Recap</span>
+    <h2>가치반복 vs 정책반복</h2>
+    <div class="twocol" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="callout q"><div class="ttl">가치반복</div><p style="margin:0">max 백업을 수렴까지 반복. 평가·개선을 <b>한 식에 합침</b>. 구현 단순, 스윕은 많이.</p></div>
+      <div class="callout v"><div class="ttl">정책반복</div><p style="margin:0">평가↔개선 번갈이. <b>적은 라운드</b>로 수렴하나 매 평가가 비쌈. 정책이 안 바뀌면 최적.</p></div>
+    </div>
+    <div class="callout good" style="margin-top:14px">
+      <p style="margin:0">둘 다 <b>모델(P·R)을 알아야</b> 해요. 그런데 현실은 모델을 모르는 경우가 대부분 — 그럼 어떻게? <b>직접 경험</b>해서 보상을 모아 가치를 추정하면 돼요. 그게 다음 PART의 <b>모델 프리</b> 방법(몬테카를로·TD)이에요.</p>
+    </div>
+    <p class="note" style="margin-top:16px">→ 다음 <b>8장 몬테카를로</b>: 모델 없이 "끝까지 가본 경험의 평균"으로 가치를 추정해요.</p>
+  </section>
+
+  <p class="foot">// 수식 없는 직관 입문 · 모든 백업·수렴은 브라우저에서 실시간 계산 · <a href="index.html">목차</a></p>
+</div>
+
+<script src="shared/lib.js"></script>
+<script>
+VZ.mountTopnav('#topnav', 'CH 07 · DP');
+VZ.setupStepper();
+const RL = VZ.RL;
+const GAMMA=0.9, STEP=-0.04;
+const env={rows:4, cols:4, goal:[0,3], pit:[1,3]};
+const reward=(r,c)=> RL.isGoal(env,r,c)?1 : RL.isPit(env,r,c)?-1 : STEP;
+const cells=()=>{ const a=[]; for(let r=0;r<4;r++)for(let c=0;c<4;c++)a.push([r,c]); return a; };
+const K=(r,c)=>r+','+c;
+function Q(V,r,c,a){ const [nr,nc]=RL.stepState(env,r,c,a); return reward(nr,nc)+(RL.isTerminal(env,nr,nc)?0:GAMMA*V[K(nr,nc)]); }
+function Vgrid(V){ const g=[]; for(let r=0;r<4;r++){g.push([]);for(let c=0;c<4;c++){g[r].push(RL.isTerminal(env,r,c)?0:(V[K(r,c)]||0));}} return g; }
+// 값 차이가 생긴 칸만 화살표(정보 없는 동률 칸은 null) — VI 애니에서 노이즈 방지
+function greedyGrid(V){ const g=[]; for(let r=0;r<4;r++){g.push([]);for(let c=0;c<4;c++){
+  if(RL.isTerminal(env,r,c)){g[r].push(null);continue;}
+  const qs=[0,1,2,3].map(a=>Q(V,r,c,a)); const mx=Math.max(...qs), mn=Math.min(...qs);
+  g[r].push(mx-mn<1e-9?null:qs.indexOf(mx)); }} return g; }
+
+// ---------- STEP 1 : 가치반복 ----------
+(function(){
+  let V, sweeps, deltas;
+  function reset(){ V={}; cells().forEach(([r,c])=>V[K(r,c)]=0); sweeps=0; deltas=[]; render(); info('전부 0에서 시작. "한 스윕"으로 가치반복을 진행하세요.'); }
+  function sweep(){ const nV={}; let d=0;
+    cells().forEach(([r,c])=>{ if(RL.isTerminal(env,r,c)){nV[K(r,c)]=0;return;}
+      let best=-1e9; for(const a of [0,1,2,3]) best=Math.max(best, Q(V,r,c,a)); nV[K(r,c)]=best;
+      d=Math.max(d,Math.abs(best-(V[K(r,c)]||0))); });
+    V=nV; sweeps++; deltas.push(d); return d; }
+  function render(){
+    document.getElementById('gwVI').innerHTML = RL.gridSVG(env,{cell:60, V:Vgrid(V), policy:greedyGrid(V), showVals:true});
+    if(deltas.length){
+      document.getElementById('viChart').innerHTML = VZ.linePlot(
+        [{pts:deltas.map((d,i)=>[i+1,d]), color:'var(--q)', label:'maxΔ'}],
+        {W:300,H:150, xlab:'스윕', ymin:0, legend:false});
+    } else document.getElementById('viChart').innerHTML='';
+  }
+  function info(m){ document.getElementById('infoVI').innerHTML=`<div class="ttl" style="color:var(--q)">스윕 ${sweeps}회 ${deltas.length?'· maxΔ='+VZ.fmt(deltas[deltas.length-1],4):''}</div><p style="margin:0">${m}</p>`; }
+  document.getElementById('vi1').onclick=()=>{ const d=sweep(); render(); info(d<1e-9?'수렴! 더 안 바뀌어요. 이게 최적 가치 V*예요.':'보물 근처부터 값이 차오르며 화살표가 자라요.'); };
+  document.getElementById('viConv').onclick=()=>{ if(sweeps&&deltas[deltas.length-1]<1e-9){info('이미 수렴했어요.');return;} let d; do{ d=sweep(); }while(d>1e-9&&sweeps<200); render(); info(`${sweeps}스윕 만에 수렴. maxΔ가 매 스윕 약 γ배로 줄었죠.`); };
+  document.getElementById('viReset').onclick=reset;
+  reset();
+})();
+
+// ---------- STEP 2 : 정책반복 ----------
+(function(){
+  let pol, V, rounds, phase, stable;     // phase: 'eval'|'imp'|null
+  function reset(){
+    pol={}; cells().forEach(([r,c])=>{ if(!RL.isTerminal(env,r,c)) pol[K(r,c)]=0; }); // 전부 ↑
+    V={}; cells().forEach(([r,c])=>V[K(r,c)]=0);
+    rounds=0; phase=null; stable=false; render(); setPhase(null);
+    info('엉성한 정책(전부 ↑)에서 시작. ① 정책평가 → ② 정책개선을 번갈아 눌러보세요.');
+  }
+  function evaluate(){ // V^π 수렴까지. 도는 스윕 수 반환(평가 비용 가시화)
+    let it; for(it=0;it<300;it++){ const nV={}; let d=0;
+      cells().forEach(([r,c])=>{ if(RL.isTerminal(env,r,c)){nV[K(r,c)]=0;return;}
+        const v=Q(V,r,c,pol[K(r,c)]); nV[K(r,c)]=v; d=Math.max(d,Math.abs(v-(V[K(r,c)]||0))); });
+      V=nV; if(d<1e-9)break; }
+    return it+1;
+  }
+  function improve(){ let changed=false;
+    cells().forEach(([r,c])=>{ if(RL.isTerminal(env,r,c))return;
+      const qs=[0,1,2,3].map(a=>Q(V,r,c,a)); const ba=qs.indexOf(Math.max(...qs));
+      if(ba!==pol[K(r,c)]){ pol[K(r,c)]=ba; changed=true; } });
+    stable=!changed; return changed;
+  }
+  function polGrid(){ const g=[]; for(let r=0;r<4;r++){g.push([]);for(let c=0;c<4;c++){g[r].push(RL.isTerminal(env,r,c)?null:pol[K(r,c)]);}} return g; }
+  function render(){ document.getElementById('gwPI').innerHTML = RL.gridSVG(env,{cell:60, V:Vgrid(V), policy:polGrid(), showVals:true}); }
+  function setPhase(p){ phase=p;
+    document.getElementById('phE').className='phase '+(p==='eval'?'on':'off');
+    document.getElementById('phI').className='phase '+(p==='imp'?'on':'off'); }
+  function info(m){ document.getElementById('infoPI').innerHTML=`<div class="ttl" style="color:var(--v)">라운드 ${rounds} ${stable?'· ✅ 최적(정책 안정)':''}</div><p style="margin:0">${m}</p>`; }
+  document.getElementById('piEval').onclick=()=>{ const n=evaluate(); setPhase('eval'); render(); info(`현재 정책의 가치 V<sup>π</sup>를 끝까지 계산했어요 — <b>${n}번의 휩쓸이(스윕)</b>가 필요했죠(평가는 이렇게 무거워요). 이제 ② 개선을 눌러보세요.`); };
+  document.getElementById('piImp').onclick=()=>{ const ch=improve(); if(ch) rounds++; setPhase('imp'); render();
+    info(ch?'각 칸을 더 좋은 행동으로 갈아끼웠어요. 다시 ① 평가 → ② 개선 반복!':'정책이 안 바뀌었어요 → <b>최적 정책 도달!</b> 더 나은 행동이 없어요.'); };
+  document.getElementById('piAuto').onclick=()=>{ for(let k=0;k<20;k++){ evaluate(); if(!improve()){break;} rounds++; } evaluate(); setPhase(null); render(); info(`자동 실행 완료 — ${rounds}번의 개선 라운드로 최적 정책 도달! 정책개선 횟수는 적지만, 매 라운드의 '평가'가 무거워요(트레이드오프).`); };
+  document.getElementById('piReset').onclick=reset;
+  reset();
+})();
+</script>
+</body>
+</html>
