@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>09 시간차 학습 TD · 강화학습, 눈으로 보기</title>
+<link rel="stylesheet" href="shared/theme.css">
+<style>
+  .gridwrap{display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;}
+  .legend{font-size:12px; color:var(--faint); line-height:1.7; font-family:'JetBrains Mono',monospace;}
+  .eq{font-family:'JetBrains Mono',monospace; font-size:13.5px; background:var(--panel); border:1px dashed var(--line);
+    border-radius:10px; padding:12px; line-height:1.9;}
+  .eq b{color:var(--hot);} .eq .d{color:var(--good);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topnav" id="topnav"></div>
+
+  <header>
+    <div class="tag">PART 3 · Chapter 09</div>
+    <h1>시간차 학습(TD) — 한 발짝 보고 추측을 고친다</h1>
+    <p class="intro">몬테카를로는 <b>끝까지</b> 가야 배웠어요. TD는 다르게 물어요: "한 걸음 가서 보상을 받고, <b>다음 칸의 현재 추정</b>으로 지금 추측을 살짝 고치면 안 될까?" 끝을 기다리지 않고 <b>매 걸음 학습</b>하며, 분산도 작아요. MC(경험)와 DP(다음 추정으로 백업)의 좋은 점을 합친 거예요.</p>
+  </header>
+
+  <nav class="stepper" id="stepper">
+    <button data-s="0" class="active">00 · MC의 한계</button>
+    <button data-s="1">01 · TD 업데이트</button>
+    <button data-s="2">02 · MC vs TD</button>
+    <button data-s="3">03 · 정리</button>
+  </nav>
+
+  <!-- STEP 0 -->
+  <section class="panel show" data-panel="0">
+    <span class="kicker" style="color:var(--hot)">Step 00 — Beyond MC</span>
+    <h2>끝까지 안 가도 배울 수 있다</h2>
+    <p class="lead">MC의 두 약점: ① <b>종료해야</b> 리턴을 알아 학습 (끝없는 과제엔 곤란), ② 리턴이 운에 크게 흔들려 <b>분산이 큼</b>. TD는 한 걸음의 실제 보상 + <b>다음 칸의 현재 추정</b>을 "목표값"으로 삼아 매 걸음 갱신해요.</p>
+    <div class="callout" style="margin-top:6px">
+      <p style="margin:0 0 8px"><b style="color:var(--q)">부트스트랩(bootstrap)</b>: "최종 결과를 기다리지 않고, <b>현재의 추측으로 추측을 갱신</b>". 일기예보가 내일까지 안 기다리고 "오늘 저녁 예보"로 "오늘 낮 예보"를 고치듯이요.</p>
+      <p style="margin:0">TD 목표 = <span class="mono">보상 + γ·V(다음 칸)</span>. MC 목표(끝까지의 실제 리턴)보다 <b>덜 출렁여요</b>(다음 칸 추정 하나만 쓰니까).</p>
+    </div>
+    <p class="note" style="margin-top:14px">→ 대신 TD는 "추측으로 추측을 고치는" 거라 처음엔 <b>편향</b>이 있어요(추정이 틀렸으니). 그래도 점점 정확해져요 — 분산↓ vs 편향↑의 맞바꿈.</p>
+  </section>
+
+  <!-- STEP 1 -->
+  <section class="panel" data-panel="1">
+    <span class="kicker" style="color:var(--q)">Step 01 — The TD Update</span>
+    <h2>한 걸음마다: V(s) ← V(s) + α·δ</h2>
+    <p class="lead">에이전트가 한 걸음 갈 때마다 <b>TD 오차 δ = (보상 + γ·V(다음)) − V(지금)</b> 를 계산해, 그 일부(α)만큼 V(지금)을 목표 쪽으로 당겨요. "▶ 한 걸음"으로 직접 보세요(α=0.3).</p>
+    <div class="gridwrap">
+      <div><div id="gw1"></div>
+        <div class="legend" style="margin-top:8px">숫자=현재 V 추정 · 🤖=에이전트 · 노란 테두리=방금 갱신된 칸</div></div>
+      <div style="flex:1;min-width:250px">
+        <div class="row" style="gap:8px;margin-bottom:10px"><button class="btn" id="step1">▶ 한 걸음</button>
+          <button class="btn" id="run1">▶▶ 한 에피소드</button>
+          <button class="btn" id="reset1" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">↺ V=0</button></div>
+        <div class="eq" id="eq1"></div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:14px">→ δ가 <b>양수</b>면 "생각보다 좋았다" → V를 올리고, <b>음수</b>면 "생각보다 나빴다" → 내려요. 끝까지 안 가도, <b>한 걸음의 정보</b>로 즉시 배우죠.</p>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="panel" data-panel="2">
+    <span class="kicker" style="color:var(--v)">Step 02 — Why TD is Stable</span>
+    <h2>목표값의 분산 — MC는 넓고, TD는 좁다</h2>
+    <p class="lead">한 상태 <b>(3,0)</b>의 가치를 추정할 때 쓰는 "목표값"을 모아봤어요. MC는 <b>끝까지의 리턴 G</b>, TD는 <b>한 걸음 목표 r+γV(다음)</b>. 둘 다 평균은 참값(점선)으로 같지만 — MC는 운에 따라 <b>넓게 흩어지고</b>, TD는 <b>좁게 모여요</b>. 이게 TD가 더 안정적인 이유예요.</p>
+    <div class="row" style="gap:8px;margin-bottom:8px">
+      <button class="btn" id="samp">+200 표본</button>
+      <button class="btn" id="reset2" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">↺ 리셋</button>
+    </div>
+    <div class="chart-wrap" id="dots2"></div>
+    <div class="legend" style="margin-top:8px">각 점 = 한 번의 목표값 표본 · 점선 = 참값 · 위=<span style="color:var(--k)">MC 리턴</span>, 아래=<span style="color:var(--q)">TD 한걸음 목표</span><br>※ 전이가 확률적이라 TD 목표는 <b>몇 개 값</b>에 모여요. 여기선 다음 칸 가치를 <b>참값</b>으로 둬 "한 걸음 목표 자체"의 분산만 비교해요(실제 학습은 추정을 써 편향이 더해짐).</div>
+    <div id="info2" class="callout v" style="margin-top:12px"></div>
+    <p class="note" style="margin-top:12px">→ 둘 다 평균은 참값이라 <b>편향이 없어요</b>. 하지만 MC 목표(끝까지 리턴)는 크게 출렁이고(분산↑), TD 목표(한 걸음+다음 추정)는 훨씬 안정적(분산↓). 대신 TD는 추정에 기대니 초기엔 <b>편향</b>이 있어요 — 분산↓ vs 편향↑의 맞바꿈이에요.</p>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="panel" data-panel="3">
+    <span class="kicker" style="color:var(--good)">Step 03 — Recap</span>
+    <h2>TD = 경험 + 부트스트랩</h2>
+    <div class="twocol" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div class="callout q"><div class="ttl" style="font-size:14px">DP</div><p style="margin:0;font-size:13px">모델 O · 한 칸 백업 · 부트스트랩 O</p></div>
+      <div class="callout k"><div class="ttl" style="font-size:14px">MC</div><p style="margin:0;font-size:13px">모델 X · 끝까지 · 부트스트랩 X</p></div>
+      <div class="callout good"><div class="ttl" style="font-size:14px">TD</div><p style="margin:0;font-size:13px">모델 X · 한 걸음 · 부트스트랩 O</p></div>
+    </div>
+    <div class="callout" style="margin-top:14px">
+      <p style="margin:0">TD는 <b>MC의 "경험으로 배움"</b> + <b>DP의 "다음 추정으로 백업"</b>을 합쳤어요. 그래서 모델 없이도, 끝을 안 기다리고, 매 걸음 학습해요. 현대 RL 대부분이 TD에 뿌리를 둬요.</p>
+    </div>
+    <p class="note" style="margin-top:16px">→ 지금까진 "정책의 가치를 평가"했어요. 다음 <b>10장</b>에서 TD를 행동가치 Q에 적용해 <b>최적 정책까지 학습</b>하는 Q-learning·SARSA로 가요.</p>
+  </section>
+
+  <p class="foot">// 수식 없는 직관 입문 · 모든 TD 갱신·비교는 브라우저에서 실시간 계산 · <a href="index.html">목차</a></p>
+</div>
+
+<script src="shared/lib.js"></script>
+<script>
+VZ.mountTopnav('#topnav', 'CH 09 · TD');
+VZ.setupStepper();
+const RL = VZ.RL;
+const GAMMA=0.9, STEP=-0.04, SLIP=0.10;
+const env={rows:4, cols:4, goal:[0,3], pit:[1,3]};
+const PERP={0:[2,3],1:[2,3],2:[0,1],3:[0,1]};
+const reward=(r,c)=> RL.isGoal(env,r,c)?1 : RL.isPit(env,r,c)?-1 : STEP;
+const cells=()=>{ const a=[]; for(let r=0;r<4;r++)for(let c=0;c<4;c++)a.push([r,c]); return a; };
+const K=(r,c)=>r+','+c;
+const nonTerm=()=>cells().filter(([r,c])=>!RL.isTerminal(env,r,c));
+const POL=(function(){
+  const [gr,gc]=env.goal, dist={}; dist[K(gr,gc)]=0; const q=[[gr,gc]];
+  while(q.length){ const [r,c]=q.shift();
+    for(const a of [0,1,2,3]){ const nr=r+RL.ACT[a].dr,nc=c+RL.ACT[a].dc;
+      if(nr<0||nc<0||nr>=4||nc>=4||RL.isPit(env,nr,nc)) continue;
+      if(dist[K(nr,nc)]==null){ dist[K(nr,nc)]=dist[K(r,c)]+1; q.push([nr,nc]); } } }
+  const P={}; nonTerm().forEach(([r,c])=>{ let best=null,bd=1e9;
+    for(const a of [0,1,2,3]){ const nr=r+RL.ACT[a].dr,nc=c+RL.ACT[a].dc;
+      if(nr<0||nc<0||nr>=4||nc>=4||RL.isPit(env,nr,nc)) continue; const d=dist[K(nr,nc)]; if(d!=null&&d<bd){bd=d;best=a;} }
+    P[K(r,c)]= best!=null?best:3; }); return P;
+})();
+function polGrid(){ const g=[]; for(let r=0;r<4;r++){g.push([]);for(let c=0;c<4;c++){g[r].push(RL.isTerminal(env,r,c)?null:POL[K(r,c)]);}} return g; }
+function transDist(r,c,a){ const d={}; const add=(rc,p)=>{ const k=K(rc[0],rc[1]); d[k]=(d[k]||0)+p; };
+  add(RL.stepState(env,r,c,a),1-2*SLIP); PERP[a].forEach(pa=>add(RL.stepState(env,r,c,pa),SLIP)); return d; }
+function sampleNext(r,c,a){ const x=Math.random(); let act;
+  if(x<1-2*SLIP) act=a; else if(x<1-SLIP) act=PERP[a][0]; else act=PERP[a][1]; return RL.stepState(env,r,c,act); }
+const TRUEV=(function(){ let V={}; cells().forEach(([r,c])=>V[K(r,c)]=0);
+  for(let it=0;it<500;it++){ const nV={}; cells().forEach(([r,c])=>{ if(RL.isTerminal(env,r,c)){nV[K(r,c)]=0;return;}
+    const d=transDist(r,c,POL[K(r,c)]); let v=0; for(const k in d){ const [nr,nc]=k.split(',').map(Number); v+=d[k]*(reward(nr,nc)+(RL.isTerminal(env,nr,nc)?0:GAMMA*V[k])); } nV[K(r,c)]=v; }); V=nV; }
+  return V; })();
+function Vgrid(Vo){ const g=[]; for(let r=0;r<4;r++){g.push([]);for(let c=0;c<4;c++){g[r].push(RL.isTerminal(env,r,c)?0:(Vo[K(r,c)]||0));}} return g; }
+const randStart=()=>{ const nt=nonTerm(); return nt[Math.floor(Math.random()*nt.length)].slice(); };
+
+// 두 표본 집합을 점으로 흩뿌려 분산을 비교 (위=MC, 아래=TD)
+function dotStrip(mc, td, trueV){
+  const W=540,H=200,padL=40,padR=16,padT=22,padB=22;
+  const all=mc.concat(td,[trueV]); let lo=Math.min(...all), hi=Math.max(...all);
+  if(hi-lo<0.2){ lo-=0.1; hi+=0.1; }
+  const px=v=> padL+(v-lo)/(hi-lo)*(W-padL-padR);
+  const laneMC=72, laneTD=148;
+  let g=`<line x1="${px(trueV).toFixed(1)}" y1="${padT}" x2="${px(trueV).toFixed(1)}" y2="${H-padB}" stroke="var(--faint)" stroke-dasharray="4 3"/>`;
+  g+=`<text x="${px(trueV).toFixed(1)}" y="${padT-5}" text-anchor="middle" fill="var(--faint)" font-size="11" font-family="JetBrains Mono">참값 ${VZ.fmt(trueV,2)}</text>`;
+  g+=`<text x="${padL}" y="${H-5}" font-size="10" fill="var(--muted)" font-family="JetBrains Mono">${VZ.fmt(lo,1)}</text>`;
+  g+=`<text x="${W-padR}" y="${H-5}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="JetBrains Mono">${VZ.fmt(hi,1)}</text>`;
+  g+=`<text x="6" y="${laneMC+4}" font-size="11" fill="var(--k)" font-weight="700">MC</text>`;
+  g+=`<text x="6" y="${laneTD+4}" font-size="11" fill="var(--q)" font-weight="700">TD</text>`;
+  const dots=(arr,lane,col)=> arr.map((v,i)=>`<circle cx="${px(v).toFixed(1)}" cy="${(lane+(((i*37)%23)-11)).toFixed(1)}" r="2.4" fill="${col}" opacity="0.38"/>`).join('');
+  g+=dots(mc,laneMC,'var(--k)')+dots(td,laneTD,'var(--q)');
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="MC와 TD 목표값 분포 비교" style="max-width:100%;display:block">${g}</svg>`;
+}
+
+// ---------- STEP 1 : TD 업데이트 ----------
+(function(){
+  const ALPHA=0.3; let V, pos, highlight, busy=false, cancel=null;
+  function reset(){ if(cancel){cancel();cancel=null;} busy=false; V={}; nonTerm().forEach(([r,c])=>V[K(r,c)]=0); pos=[3,0]; highlight=null; render(); document.getElementById('eq1').innerHTML='▶ 한 걸음을 눌러 TD 갱신을 보세요.'; }
+  function render(){ document.getElementById('gw1').innerHTML = RL.gridSVG(env,{cell:60, V:Vgrid(V), policy:polGrid(), showVals:true, agent:pos, highlight}); }
+  function stepOnce(){
+    if(RL.isTerminal(env,pos[0],pos[1])){ pos=randStart(); highlight=null; render(); document.getElementById('eq1').innerHTML='종료 도달 → 새 시작점에서 계속. 다시 ▶.'; return; }
+    const [r,c]=pos; const [nr,nc]=sampleNext(r,c,POL[K(r,c)]); const rw=reward(nr,nc);
+    const vNext = RL.isTerminal(env,nr,nc)?0:V[K(nr,nc)];
+    const target = rw + GAMMA*vNext, old=V[K(r,c)], delta=target-old;
+    V[K(r,c)] = old + ALPHA*delta; highlight=[r,c]; pos=[nr,nc]; render();
+    document.getElementById('eq1').innerHTML =
+      `<div>한 걸음: (${r},${c}) → (${nr},${nc}), 보상 ${VZ.fmt(rw,2)}</div>
+       <div>TD목표 = ${VZ.fmt(rw,2)} + ${GAMMA}×V(${nr},${nc})[${VZ.fmt(vNext,2)}] = <b>${VZ.fmt(target,2)}</b></div>
+       <div>δ = 목표 − V(${r},${c})[${VZ.fmt(old,2)}] = <span class="d">${VZ.fmt(delta,2)}</span></div>
+       <div>V(${r},${c}) ← ${VZ.fmt(old,2)} + ${ALPHA}×δ = <b>${VZ.fmt(V[K(r,c)],2)}</b></div>`;
+  }
+  function runEp(){
+    if(busy) return; busy=true;
+    cancel = VZ.stepLight(Array.from({length:60}), ()=>{
+      if(RL.isTerminal(env,pos[0],pos[1])){ busy=false; if(cancel){cancel();cancel=null;} return; }  // 에피소드 끝나면 정지
+      stepOnce();
+    }, 170);
+  }
+  document.getElementById('step1').onclick=()=>{ if(!busy) stepOnce(); };
+  document.getElementById('run1').onclick=runEp;
+  document.getElementById('reset1').onclick=reset;
+  reset();
+})();
+
+// ---------- STEP 2 : 목표값 분산 비교 ----------
+(function(){
+  const S0=[3,0]; let mc, td;
+  function sampleOnce(){
+    let [r,c]=S0;
+    const [fr,fc]=sampleNext(r,c,POL[K(r,c)]); const frw=reward(fr,fc);
+    // TD 한 걸음 목표 (다음 칸은 참값으로 부트스트랩 — 한 걸음 목표의 '본질적' 분산 비교)
+    td.push(frw + (RL.isTerminal(env,fr,fc)?0:GAMMA*TRUEV[K(fr,fc)]));
+    // MC 전체 리턴
+    let cr=fr,cc=fc; const rw=[frw]; let g=0;
+    while(!RL.isTerminal(env,cr,cc) && g<100){ const [nr,nc]=sampleNext(cr,cc,POL[K(cr,cc)]); rw.push(reward(nr,nc)); cr=nr;cc=nc; g++; }
+    let G=0; for(let t=rw.length-1;t>=0;t--) G=rw[t]+GAMMA*G; mc.push(G);
+  }
+  function std(a){ if(!a.length)return 0; const m=a.reduce((x,y)=>x+y,0)/a.length; return Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/a.length); }
+  function add(n){ for(let i=0;i<n;i++) sampleOnce(); if(mc.length>400){mc=mc.slice(-400);td=td.slice(-400);} render(); }
+  function render(){
+    document.getElementById('dots2').innerHTML = mc.length? dotStrip(mc,td,TRUEV[K(3,0)]) : '';
+    document.getElementById('info2').innerHTML = mc.length
+      ? `<div class="ttl" style="color:var(--v)">표본 ${mc.length}개씩 · 표준편차 — MC <b style="color:var(--k)">${VZ.fmt(std(mc),3)}</b> vs TD <b style="color:var(--q)">${VZ.fmt(std(td),3)}</b></div>
+         <p style="margin:0">평균은 둘 다 참값 근처인데, TD의 퍼짐이 약 <b>${(std(mc)/Math.max(std(td),1e-9)).toFixed(0)}배</b> 좁아요 — 그래서 학습이 더 안정적이에요.</p>`
+      : '<div class="ttl" style="color:var(--v)">+200 표본을 눌러보세요.</div>';
+  }
+  function reset(){ mc=[]; td=[]; render(); }
+  document.getElementById('samp').onclick=()=>add(200);
+  document.getElementById('reset2').onclick=reset;
+  add(200);
+})();
+</script>
+</body>
+</html>
