@@ -391,3 +391,66 @@
 
   VZ.RL = { ACT, keyOf, argmax, asPits, isWall, isGoal, isPit, isTerminal, stepState, valColor, gridSVG };
 })(window);
+
+/* ============================================================
+   꺾은선 차트 (VZ.linePlot) — 학습/보상 곡선용 (02·08·09·11·12장 공유)
+   series: [{pts:[[x,y]...], color, label, dash?}]
+   opts: {W,H, xlab, ylab, xmin,xmax,ymin,ymax (생략시 자동), legend, hline:{y,label}}
+   ============================================================ */
+(function (global) {
+  'use strict';
+  const VZ = global.VZ;
+  function linePlot(series, opts = {}) {
+    const W = opts.W || 460, H = opts.H || 230, padL = 44, padR = 14, padT = opts.legend === false ? 14 : 30, padB = 34;
+    const all = series.filter(s => s.pts && s.pts.length);
+    let xmin = opts.xmin, xmax = opts.xmax, ymin = opts.ymin, ymax = opts.ymax;
+    if (xmin == null) xmin = Math.min(...all.flatMap(s => s.pts.map(p => p[0])), 0);
+    if (xmax == null) xmax = Math.max(...all.flatMap(s => s.pts.map(p => p[0])), 1);
+    if (ymin == null) ymin = Math.min(...all.flatMap(s => s.pts.map(p => p[1])), 0);
+    if (ymax == null) ymax = Math.max(...all.flatMap(s => s.pts.map(p => p[1])), 1);
+    if (ymax === ymin) ymax = ymin + 1;
+    if (xmax === xmin) xmax = xmin + 1;
+    const px = x => padL + (x - xmin) / (xmax - xmin) * (W - padL - padR);
+    const py = y => H - padB - (y - ymin) / (ymax - ymin) * (H - padT - padB);
+    let g = '';
+    // y 격자 + 눈금 (4분할)
+    for (let i = 0; i <= 4; i++) {
+      const yv = ymin + (ymax - ymin) * i / 4, y = py(yv);
+      g += `<line class="gridline" x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}"/>`;
+      g += `<text class="axislabel" x="${padL - 6}" y="${y + 3}" text-anchor="end">${VZ.fmt(yv, Math.abs(ymax - ymin) >= 10 ? 0 : 1)}</text>`;
+    }
+    // x 세로 격자 (4분할)
+    for (let i = 1; i < 4; i++) { const xv = xmin + (xmax - xmin) * i / 4; g += `<line class="gridline" x1="${px(xv)}" y1="${padT}" x2="${px(xv)}" y2="${H - padB}"/>`; }
+    // 축
+    g += `<line class="axis" x1="${padL}" y1="${py(ymin)}" x2="${W - padR}" y2="${py(ymin)}"/>`;
+    g += `<line class="axis" x1="${padL}" y1="${padT}" x2="${padL}" y2="${H - padB}"/>`;
+    // x 눈금 라벨: 시작·끝 (+ xlab 없으면 중간)
+    g += `<text class="axislabel" x="${padL}" y="${H - padB + 16}" text-anchor="start">${VZ.fmt(xmin, 0)}</text>`;
+    g += `<text class="axislabel" x="${W - padR}" y="${H - padB + 16}" text-anchor="end">${VZ.fmt(xmax, 0)}</text>`;
+    if (opts.xlab) g += `<text class="axislabel" x="${(padL + W - padR) / 2}" y="${H - padB + 16}" text-anchor="middle">${opts.xlab}</text>`;
+    else g += `<text class="axislabel" x="${px((xmin + xmax) / 2)}" y="${H - padB + 16}" text-anchor="middle">${VZ.fmt((xmin + xmax) / 2, 0)}</text>`;
+    if (opts.ylab) g += `<text class="axislabel" x="${padL - 30}" y="${(padT + H - padB) / 2}" text-anchor="middle" transform="rotate(-90 ${padL - 30} ${(padT + H - padB) / 2})">${opts.ylab}</text>`;
+    if (opts.hline) {
+      const y = py(opts.hline.y);
+      g += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="var(--faint)" stroke-width="1" stroke-dasharray="4 3"/>`;
+      if (opts.hline.label) g += `<text class="axislabel" x="${W - padR}" y="${y - 4}" text-anchor="end" fill="var(--faint)">${opts.hline.label}</text>`;
+    }
+    // 시리즈
+    all.forEach(s => {
+      const d = s.pts.map((p, i) => `${i ? 'L' : 'M'}${px(p[0]).toFixed(1)},${py(p[1]).toFixed(1)}`).join(' ');
+      g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2.5" ${s.dash ? `stroke-dasharray="${s.dash}"` : ''} stroke-linejoin="round"/>`;
+    });
+    // 범례
+    if (opts.legend !== false) {
+      let lx = padL;
+      all.forEach(s => {
+        if (!s.label) return;
+        g += `<line x1="${lx}" y1="10" x2="${lx + 16}" y2="10" stroke="${s.color}" stroke-width="3" ${s.dash ? `stroke-dasharray="${s.dash}"` : ''}/>`;
+        g += `<text x="${lx + 20}" y="13" font-size="11" font-family="JetBrains Mono" fill="var(--muted)">${s.label}</text>`;
+        lx += 26 + (s.label.length * 7.2);
+      });
+    }
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="max-width:100%;display:block">${g}</svg>`;
+  }
+  VZ.linePlot = linePlot;
+})(window);

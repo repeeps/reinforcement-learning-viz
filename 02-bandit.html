@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>02 멀티암드 밴딧 · 강화학습, 눈으로 보기</title>
+<link rel="stylesheet" href="shared/theme.css">
+<style>
+  .machines{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:6px 0;}
+  @media(max-width:620px){ .machines{grid-template-columns:repeat(2,1fr);} }
+  .slot{background:var(--panel-2); border:1px solid var(--line); border-radius:14px; padding:14px; text-align:center; transition:.15s;}
+  .slot.best{border-color:var(--good);}
+  .slot .face{font-size:30px; line-height:1;}
+  .slot .nm{font-weight:800; margin:5px 0 2px;}
+  .slot .est{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted);}
+  .slot .bar{margin-top:8px; height:9px; border-radius:5px; background:var(--panel); border:1px solid var(--line); overflow:hidden;}
+  .slot .bar > div{height:100%; background:var(--v); transition:width .35s;}
+  .slot button{margin-top:9px; width:100%;}
+  .legend{font-size:12px; color:var(--faint); line-height:1.7; font-family:'JetBrains Mono',monospace;}
+  .chart-wrap{margin-top:12px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topnav" id="topnav"></div>
+
+  <header>
+    <div class="tag">PART 1 · Chapter 02</div>
+    <h1>멀티암드 밴딧 — 탐험과 활용의 딜레마</h1>
+    <p class="intro">슬롯머신("외팔이 강도") 여러 대 앞에 섰어요. 각 기계의 당첨 확률은 <b>모르고</b>, 당길 기회는 <b>한정</b>돼요. 지금까지 제일 좋아 보이는 걸 계속 당길까(<b>활용</b>), 더 나은 걸 찾아 새로 시도할까(<b>탐험</b>)? 이 가장 단순한 RL 문제로 강화학습의 심장을 들여다봐요.</p>
+  </header>
+
+  <nav class="stepper" id="stepper">
+    <button data-s="0" class="active">00 · 밴딧 문제</button>
+    <button data-s="1">01 · 탐험 vs 활용</button>
+    <button data-s="2">02 · 전략 비교</button>
+    <button data-s="3">03 · 후회와 정리</button>
+  </nav>
+
+  <!-- STEP 0 -->
+  <section class="panel show" data-panel="0">
+    <span class="kicker" style="color:var(--hot)">Step 00 — The Problem</span>
+    <h2>당겨봐야만 알 수 있다</h2>
+    <p class="lead">기계 4대, 각자 다른 <b>숨은 당첨 확률</b>. 직접 당겨서 <b>추정 승률</b>을 만들어 보세요. 몇 번 안 당긴 기계의 추정은 못 믿어요 — 그게 핵심 난점이에요.</p>
+    <div class="machines" id="slots0"></div>
+    <div class="row" style="gap:8px;margin:10px 0">
+      <button class="btn" id="reveal0">👁 진짜 확률 보기</button>
+      <button class="btn" id="reset0" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">↺ 리셋</button>
+      <span class="note" id="info0"></span>
+    </div>
+    <p class="note">→ 추정(막대)은 <b>당긴 횟수가 적을수록</b> 진짜 확률에서 멀어요. "적게 당겨본 기계가 사실 최고일 수도 있다"는 가능성 때문에 무작정 활용만 할 수 없어요.</p>
+  </section>
+
+  <!-- STEP 1 -->
+  <section class="panel" data-panel="1">
+    <span class="kicker" style="color:var(--q)">Step 01 — Explore vs Exploit</span>
+    <h2>ε-greedy: 대부분 활용, 가끔 탐험</h2>
+    <p class="lead">가장 단순한 균형책. 매 턴 <b>확률 ε로 무작위(탐험)</b>, 나머지 <b>1−ε는 추정 최고(활용)</b>를 당겨요. ε를 바꿔 자동으로 돌려보면, 각 기계를 얼마나 당기는지가 달라져요.</p>
+    <div class="ctrl">
+      <label>탐험률 ε</label>
+      <input type="range" id="eps" min="0" max="100" value="10">
+      <span class="val" id="epsv">0.10</span>
+    </div>
+    <div class="row" style="gap:8px;margin:6px 0 12px">
+      <button class="btn" id="run1">▶ 자동 100회</button>
+      <button class="btn" id="reset1" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">↺ 리셋</button>
+    </div>
+    <div class="machines" id="slots1"></div>
+    <div id="info1" class="callout q" style="margin-top:12px"></div>
+    <p class="note" style="margin-top:10px">→ ε=0(순수 활용)이면 처음 운 좋았던 기계에 갇히기 쉽고, ε가 너무 크면 다 알아낸 뒤에도 계속 헤매요. <b>적당한 ε</b>가 핵심.</p>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="panel" data-panel="2">
+    <span class="kicker" style="color:var(--v)">Step 02 — Strategies over Time</span>
+    <h2>오래 보면 누가 이길까</h2>
+    <p class="lead">세 전략을 <b>200턴 × 여러 판 평균</b>으로 비교해요. 세로축은 <b>"최적 기계를 고른 비율"</b>. 순수 활용은 일찍 정체되고, 탐험을 섞은 쪽이 결국 최적 기계를 더 자주 골라요.</p>
+    <div class="row" style="gap:8px;margin-bottom:6px">
+      <button class="btn" id="run2">🎲 다시 시뮬레이션</button>
+      <span class="note" id="info2"></span>
+    </div>
+    <div class="chart-wrap" id="chart2"></div>
+    <div class="legend" style="margin-top:8px">— <span style="color:var(--slate)">greedy</span>(ε=0, 순수 활용) · <span style="color:var(--q)">ε-greedy</span>(ε=0.1) · <span style="color:var(--good)">낙관적 초기화</span>(추정을 높게 시작해 저절로 탐험)</div>
+    <p class="note" style="margin-top:12px">→ <b>greedy</b>는 첫 턴 운으로 한 기계에 <b>갇혀</b> ~35%에 정체해요(운 좋게 최적에 갇힐 확률이 낮으니까). <b>낙관적 초기화</b>는 추정을 높게(everything looks great) 시작해, 당겨보고 실망하며 자연스럽게 여러 기계를 시도해요 — 무작위 없이도 탐험이 생기죠. (셋 다 같은 속도로 학습하게 맞췄고, 낙관만 출발 추정이 높아요.)</p>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="panel" data-panel="3">
+    <span class="kicker" style="color:var(--good)">Step 03 — Regret · Recap</span>
+    <h2>'후회'로 성능을 잰다</h2>
+    <p class="lead">매 턴 <b>최적 기계 대신 다른 걸 골라 놓친 보상</b>의 누적이 <b>후회(regret)</b>예요. 핵심은 곡선의 <b>기울기</b>: greedy는 한 기계에 갇혀 매 턴 같은 손해 → 기울기가 안 줄어요(<b>직선</b>=영원히 손해). 똑똑한 전략일수록 기울기가 점점 <b>평평</b>해져요.</p>
+    <div class="chart-wrap" id="chart3"></div>
+    <div class="callout" style="margin-top:14px">
+      <p style="margin:0 0 8px"><b style="color:var(--hot)">밴딧은 "상태가 하나뿐인 RL"</b>이에요. 내 행동이 <b>다음 상황을 바꾸지 않죠</b>(어느 기계를 당겨도 다음 턴 상황은 똑같음). 그래서 "탐험 vs 활용"만 순수하게 다룰 수 있어요.</p>
+      <p style="margin:0">하지만 진짜 세상은 <b>내 행동이 다음 상태를 바꿔요</b>(왼쪽으로 가면 다음 위치가 바뀌듯). 거기에 "상태"와 "전이"를 더하면 — 다음 장의 <b>MDP</b>예요.</p>
+    </div>
+    <p class="note" style="margin-top:16px">→ 다음 <b>3장 · MDP</b>에서 상태·행동·보상·전이·정책으로 강화학습 문제를 제대로 정의해요.</p>
+  </section>
+
+  <p class="foot">// 수식 없는 직관 입문 · 모든 보상·추정은 브라우저에서 실시간 계산 · <a href="index.html">목차</a></p>
+</div>
+
+<script src="shared/lib.js"></script>
+<script>
+VZ.mountTopnav('#topnav', 'CH 02 · 밴딧');
+VZ.setupStepper();
+
+const TRUE=[0.25,0.5,0.65,0.4];          // 숨은 당첨 확률
+const BEST=2;                             // 최적 기계(0.65)
+const NAME=['A','B','C','D'], FACE=['🎰','🎰','🎰','🎰'];
+const amax=a=>{const mx=Math.max(...a),idx=[];a.forEach((x,i)=>{if(x===mx)idx.push(i);});return idx[Math.floor(Math.random()*idx.length)];};
+const pull=i=> Math.random()<TRUE[i] ? 1 : 0;
+
+// ---------- STEP 0 : 직접 당기기 ----------
+(function(){
+  let n, w, revealed;
+  function est(i){ return n[i]? w[i]/n[i] : 0; }
+  function reset(){ n=[0,0,0,0]; w=[0,0,0,0]; revealed=false; render(); info0(''); }
+  function render(){
+    document.getElementById('slots0').innerHTML = NAME.map((nm,i)=>
+      `<div class="slot">
+        <div class="face">${FACE[i]}</div>
+        <div class="nm">기계 ${nm}</div>
+        <div class="est">${n[i]?'추정 '+(est(i)*100).toFixed(0)+'% · '+n[i]+'회':'아직 ?'}</div>
+        ${revealed?`<div class="est" style="color:var(--good)">진짜 ${(TRUE[i]*100).toFixed(0)}%</div>`:''}
+        <div class="bar"><div style="width:${(est(i)*100).toFixed(0)}%"></div></div>
+        <button class="btn" data-i="${i}">당기기</button>
+      </div>`).join('');
+    document.getElementById('slots0').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+      const i=+b.dataset.i, r=pull(i); n[i]++; w[i]+=r; render();
+      info0(`기계 ${NAME[i]} → ${r? '<b style="color:var(--good)">당첨</b>':'<span style="color:var(--k)">꽝</span>'} · 총 ${n.reduce((a,b)=>a+b,0)}회 당김`);
+    });
+  }
+  function info0(m){ document.getElementById('info0').innerHTML=m; }
+  document.getElementById('reveal0').onclick=()=>{ revealed=!revealed; render(); };
+  document.getElementById('reset0').onclick=reset;
+  reset();
+})();
+
+// ---------- STEP 1 : ε-greedy 자동 ----------
+(function(){
+  let n, w, eps=0.10, explore, exploit;
+  function est(i){ return n[i]? w[i]/n[i] : 0; }
+  function reset(){ n=[0,0,0,0]; w=[0,0,0,0]; explore=0; exploit=0; render(); info('▶ 자동 100회를 눌러 ε-greedy가 어떻게 당기는지 보세요.'); }
+  function step(){
+    let i, ex;
+    if(Math.random()<eps){ i=Math.floor(Math.random()*4); ex=true; }
+    else { i=amax([est(0),est(1),est(2),est(3)]); ex=false; }
+    const r=pull(i); n[i]++; w[i]+=r; if(ex)explore++; else exploit++;
+  }
+  function render(){
+    const tot=n.reduce((a,b)=>a+b,0);
+    document.getElementById('slots1').innerHTML = NAME.map((nm,i)=>
+      `<div class="slot ${i===BEST?'best':''}">
+        <div class="face">${FACE[i]}</div>
+        <div class="nm">기계 ${nm}${i===BEST?' ⭐':''}</div>
+        <div class="est">${n[i]?'추정 '+(est(i)*100).toFixed(0)+'%':'?'} · ${tot?Math.round(n[i]/tot*100):0}% 당김</div>
+        <div class="bar"><div style="width:${(est(i)*100).toFixed(0)}%"></div></div>
+      </div>`).join('');
+  }
+  function info(m){ document.getElementById('info1').innerHTML=m; }
+  function summary(){
+    const tot=n.reduce((a,b)=>a+b,0), wins=w.reduce((a,b)=>a+b,0);
+    info(`<div class="ttl" style="color:var(--q)">총 ${tot}회 · 탐험 ${explore} / 활용 ${exploit} · 당첨 ${wins}</div>
+      <p style="margin:0">최적 기계 <b>C ⭐</b>를 ${tot?Math.round(n[BEST]/tot*100):0}% 당겼어요. ε가 작을수록 한 기계에 집중, 클수록 고르게 흩어져요.</p>`);
+  }
+  document.getElementById('eps').oninput=e=>{ eps=e.target.value/100; document.getElementById('epsv').textContent=eps.toFixed(2); };
+  document.getElementById('run1').onclick=()=>{ for(let k=0;k<100;k++) step(); render(); summary(); };
+  document.getElementById('reset1').onclick=reset;
+  reset();
+})();
+
+// ---------- STEP 2 : 전략 비교 (최적행동 비율 곡선) ----------
+(function(){
+  const T=200, TRIALS=400, ALPHA=0.1;
+  function runStrategy(kind){
+    // 세 전략 모두 상수 스텝 α=0.1로 공정 비교. 낙관적은 추정 초기값만 높게(1.0).
+    const opt=new Array(T).fill(0);
+    for(let tr=0; tr<TRIALS; tr++){
+      const q = kind==='optim'? [1,1,1,1] : [0,0,0,0];
+      for(let t=0;t<T;t++){
+        let i;
+        if(kind==='eps' && Math.random()<0.1) i=Math.floor(Math.random()*4);
+        else i=amax(q);
+        if(i===BEST) opt[t]++;
+        const r=pull(i); q[i]+= ALPHA*(r-q[i]);   // 상수 스텝 업데이트
+      }
+    }
+    return opt.map(c=>c/TRIALS);
+  }
+  function run(){
+    document.getElementById('info2').textContent='계산 중…';
+    setTimeout(()=>{
+      const g=runStrategy('greedy'), e=runStrategy('eps'), o=runStrategy('optim');
+      const mk=arr=>arr.map((y,t)=>[t+1,y]);
+      document.getElementById('chart2').innerHTML = VZ.linePlot([
+        {pts:mk(g), color:'var(--slate)', label:'greedy'},
+        {pts:mk(e), color:'var(--q)', label:'ε-greedy'},
+        {pts:mk(o), color:'var(--good)', label:'낙관적'},
+      ], {W:520,H:260, xlab:'턴', ylab:'최적 기계 선택 비율', ymin:0, ymax:1, hline:{y:1,label:'최적'}});
+      const last=a=>Math.round(a[a.length-1]*100);
+      document.getElementById('info2').innerHTML=`200턴째 최적 선택률 — greedy ${last(g)}% · ε-greedy ${last(e)}% · 낙관적 ${last(o)}%`;
+    }, 20);
+  }
+  document.getElementById('run2').onclick=run;
+  run();
+})();
+
+// ---------- STEP 3 : 후회 곡선 ----------
+(function(){
+  const T=200, TRIALS=300;
+  const ALPHA=0.1;
+  function regret(kind){
+    const reg=new Array(T).fill(0);
+    for(let tr=0;tr<TRIALS;tr++){
+      const q=kind==='optim'?[1,1,1,1]:[0,0,0,0]; let acc=0;
+      for(let t=0;t<T;t++){
+        let i;
+        if(kind==='eps'&&Math.random()<0.1) i=Math.floor(Math.random()*4);
+        else i=amax(q);
+        acc += TRUE[BEST]-TRUE[i];      // 기대 후회 = 최적 기대보상 − 선택 기대보상
+        reg[t]+=acc;
+        const r=pull(i); q[i]+=ALPHA*(r-q[i]);
+      }
+    }
+    return reg.map(s=>s/TRIALS);
+  }
+  function run(){
+    const g=regret('greedy'), e=regret('eps'), o=regret('optim');
+    const mk=arr=>arr.map((y,t)=>[t+1,y]);
+    document.getElementById('chart3').innerHTML = VZ.linePlot([
+      {pts:mk(g), color:'var(--slate)', label:'greedy'},
+      {pts:mk(e), color:'var(--q)', label:'ε-greedy'},
+      {pts:mk(o), color:'var(--good)', label:'낙관적'},
+    ], {W:520,H:230, xlab:'턴', ylab:'누적 후회(낮을수록 좋음)', ymin:0});
+  }
+  run();
+})();
+</script>
+</body>
+</html>

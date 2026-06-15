@@ -141,7 +141,7 @@
 <script>
 // 공개된 페이지만 클릭 가능 — 챕터를 완성할 때마다 파일명을 READY에 추가하세요.
 (function(){
-  const READY = new Set(['00-intro.html','01-what-is-rl.html']);
+  const READY = new Set(['00-intro.html','01-what-is-rl.html','02-bandit.html']);
   document.querySelectorAll('a.ccard').forEach(a=>{
     if(READY.has(a.getAttribute('href'))) return;
     a.classList.add('soon');
