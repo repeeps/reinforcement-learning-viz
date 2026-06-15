@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>03 MDP · 강화학습, 눈으로 보기</title>
+<link rel="stylesheet" href="shared/theme.css">
+<style>
+  .gridwrap{display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;}
+  .legend{font-size:12px; color:var(--faint); line-height:1.7; font-family:'JetBrains Mono',monospace;}
+  .mdp5{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:8px;}
+  .mdp5 .c{background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:12px;}
+  .mdp5 .c b{font-size:14px;} .mdp5 .c .d{font-size:12px; color:var(--muted); margin-top:4px; line-height:1.55;}
+  .pad{display:grid; grid-template-columns:repeat(3,40px); grid-template-rows:repeat(3,40px); gap:6px; justify-content:center;}
+  .pad button{border:1px solid var(--q); background:rgba(55,189,248,.12); color:var(--q); border-radius:8px; cursor:pointer; font-size:16px; font-weight:700;}
+  .pad button:hover{background:var(--q); color:#04121f;} .pad .sp{visibility:hidden;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topnav" id="topnav"></div>
+
+  <header>
+    <div class="tag">PART 1 · Chapter 03</div>
+    <h1>MDP — 강화학습 문제의 뼈대</h1>
+    <p class="intro">밴딧엔 "상태"가 없었어요(어느 기계를 당겨도 다음 상황은 같음). 진짜 세상은 <b>내 행동이 다음 상태를 바꿔요</b>. 여기에 <b>상태·행동·전이·보상·정책</b> 다섯 요소를 더한 게 <b>마르코프 결정 과정(MDP)</b> — 거의 모든 RL 문제를 적는 공용 언어예요.</p>
+  </header>
+
+  <nav class="stepper" id="stepper">
+    <button data-s="0" class="active">00 · 상태가 생긴다</button>
+    <button data-s="1">01 · 확률적 전이</button>
+    <button data-s="2">02 · 정책과 궤적</button>
+    <button data-s="3">03 · 마르코프·정리</button>
+  </nav>
+
+  <!-- STEP 0 -->
+  <section class="panel show" data-panel="0">
+    <span class="kicker" style="color:var(--hot)">Step 00 — States Appear</span>
+    <h2>행동이 다음 상태를 바꾼다</h2>
+    <p class="lead">격자 위 로봇의 <b>위치가 곧 상태</b>예요. 움직여 보세요 — 밴딧과 달리 <b>행동(이동)이 다음 상태를 바꾸죠</b>. 그래서 "지금 어디 있느냐"가 중요해져요.</p>
+    <div class="gridwrap">
+      <div><div id="gw0"></div>
+        <div class="legend" style="margin-top:8px">🤖 = 현재 상태 · 이 격자엔 상태가 <b id="nstates">0</b>개</div></div>
+      <div style="flex:1;min-width:200px">
+        <div class="pad" id="pad0"></div>
+        <div id="info0" class="callout q" style="margin-top:12px"></div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:14px">→ 밴딧은 상태 1개(늘 같은 상황)였죠. 이제 상태가 여러 개고, <b>같은 행동도 어느 상태에서 하느냐</b>에 따라 결과가 달라요. 이게 RL을 풍부하고 어렵게 만들어요.</p>
+  </section>
+
+  <!-- STEP 1 -->
+  <section class="panel" data-panel="1">
+    <span class="kicker" style="color:var(--q)">Step 01 — Stochastic Transitions</span>
+    <h2>미끄러운 얼음: 의도대로 안 갈 수도</h2>
+    <p class="lead">현실의 환경은 <b>확률적</b>이에요. "오른쪽"을 의도해도 얼음에서 미끄러져 옆으로 갈 수 있죠. 이 <b>전이 확률 P(다음상태 | 상태, 행동)</b> 가 MDP의 핵심 요소예요. 의도 방향을 누르고, 미끄럼 정도를 조절해 보세요.</p>
+    <div class="gridwrap">
+      <div><div id="gw1"></div>
+        <div class="legend" style="margin-top:8px">칸 숫자·색 = 그 칸에 도착할 <b>확률</b> · 🎲로 실제 한 번 굴려보기</div></div>
+      <div style="flex:1;min-width:210px">
+        <div class="pad" id="pad1"></div>
+        <div class="ctrl" style="margin-top:12px"><label>미끄럼 ε</label>
+          <input type="range" id="slip" min="0" max="40" value="20"><span class="val" id="slipv">20%</span></div>
+        <button class="btn" id="roll" style="margin-top:6px">🎲 한 번 굴리기</button>
+        <div id="info1" class="callout q" style="margin-top:12px"></div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:14px">→ 의도한 방향으로 <b>1−2ε</b>, 양옆으로 각 <b>ε</b>씩 미끄러져요(벽이면 제자리). 환경이 확률적이라, 같은 상태·행동도 <b>매번 다른 결과</b>가 나올 수 있어요.</p>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="panel" data-panel="2">
+    <span class="kicker" style="color:var(--v)">Step 02 — Policy &amp; Trajectory</span>
+    <h2>정책: 상태마다 무엇을 할지</h2>
+    <p class="lead"><b>정책(π)</b> = "각 상태에서 어떤 행동을 할까"의 규칙(화살표). 정책을 정하고 에피소드를 돌리면 <b>궤적</b>이 생겨요. 환경이 확률적이라(미끄럼 15%) <b>같은 정책도 매번 다른 길</b>을 가죠.</p>
+    <div class="row" style="gap:8px;margin-bottom:8px">
+      <span class="note">정책:</span>
+      <button class="btn" id="polGoal">🎯 목표 지향</button>
+      <button class="btn" id="polRight" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">➡ 무조건 오른쪽</button>
+    </div>
+    <div class="gridwrap">
+      <div><div id="gw2"></div>
+        <div class="legend" style="margin-top:8px">화살표 = 정책 · ⭐ 목표 +1 · 🕳️ 함정 −1 · 파란 점 = 지나온 궤적</div></div>
+      <div style="flex:1;min-width:210px">
+        <div class="row" style="gap:8px;margin-bottom:10px">
+          <button class="btn" id="run2">▶ 한 에피소드</button>
+          <button class="btn" id="run2x">▶▶ 10번</button>
+        </div>
+        <div id="info2" class="callout v"></div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:14px">→ "목표 지향" 정책이 보통 더 자주·빨리 도착해요. <b>같은 정책인데 결과가 흩어지는</b> 건 전이가 확률적이기 때문 — 그래서 "정책의 좋음"은 <b>평균</b>으로 재야 해요(다음 장들).</p>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="panel" data-panel="3">
+    <span class="kicker" style="color:var(--good)">Step 03 — Markov Property · Recap</span>
+    <h2>마르코프 성질 — "미래는 현재만으로"</h2>
+    <p class="lead">MDP의 'M': <b>다음 상태·보상은 오직 지금 상태와 행동에만 달렸다</b>. 여기까지 <b>어떻게</b> 왔는지(과거 경로)는 상관없어요. 덕분에 "지금 상태"만 알면 최선의 결정을 내릴 수 있죠.</p>
+    <div class="callout" style="margin-top:6px">
+      <p style="margin:0">예: 체스에서 <b>현재 판</b>만 보면 최선의 수를 둘 수 있어요 — 그 판이 어떤 순서로 만들어졌는지는 몰라도 돼요. (상태가 충분한 정보를 담고 있을 때 성립.)</p>
+    </div>
+    <h3 style="margin:22px 0 6px; font-size:16px">MDP의 다섯 요소</h3>
+    <div class="mdp5" id="mdp5"></div>
+    <p class="note" style="margin-top:16px">→ 이제 문제를 적는 언어가 생겼어요. 다음 <b>4장</b>에서 "여러 스텝의 보상을 어떻게 하나의 점수로 합칠까?"(누적 보상과 할인율)를 다뤄요.</p>
+  </section>
+
+  <p class="foot">// 수식 없는 직관 입문 · 모든 전이·궤적은 브라우저에서 실시간 계산 · <a href="index.html">목차</a></p>
+</div>
+
+<script src="shared/lib.js"></script>
+<script>
+VZ.mountTopnav('#topnav', 'CH 03 · MDP');
+VZ.setupStepper();
+const RL = VZ.RL;
+// 수직(perpendicular) 행동: 상↔[좌,우], 하↔[좌,우], 좌↔[상,하], 우↔[상,하]
+const PERP = {0:[2,3], 1:[2,3], 2:[0,1], 3:[0,1]};
+
+// ---------- STEP 0 : 상태가 생긴다 ----------
+(function(){
+  const env={rows:3, cols:4, start:[2,0]};
+  let pos;
+  function render(){
+    document.getElementById('gw0').innerHTML = RL.gridSVG(env, {cell:60, agent:pos});
+    document.getElementById('nstates').textContent = env.rows*env.cols;
+    document.getElementById('info0').innerHTML =
+      `<div class="ttl" style="color:var(--q)">현재 상태 = (행 ${pos[0]}, 열 ${pos[1]})</div><p style="margin:0">방향 버튼으로 움직이면 상태가 바뀌어요.</p>`;
+  }
+  function move(a){ pos = RL.stepState(env, pos[0], pos[1], a); render(); }
+  function reset(){ pos=env.start.slice(); render(); }
+  const P=[['sp',0,'sp'],[2,'sp',3],['sp',1,'sp']]; // 패드 배치: 상/좌우/하
+  document.getElementById('pad0').innerHTML = P.flat().map(x=>
+    x==='sp'?`<button class="sp"></button>`:`<button data-a="${x}">${RL.ACT[x].sym}</button>`).join('');
+  document.getElementById('pad0').querySelectorAll('button[data-a]').forEach(b=>b.onclick=()=>move(+b.dataset.a));
+  reset();
+})();
+
+// ---------- STEP 1 : 확률적 전이 ----------
+(function(){
+  const env={rows:3, cols:3};
+  const C=[0,0];                   // 모서리 — 벽 쪽 의도 시 "제자리 합산"이 보이게
+  let intended=0, slip=0.20, sample=null;
+  function dist(a){
+    // 반환: {"r,c": prob}
+    const d={}; const add=(rc,p)=>{ const k=rc[0]+','+rc[1]; d[k]=(d[k]||0)+p; };
+    add(RL.stepState(env,C[0],C[1],a), 1-2*slip);
+    PERP[a].forEach(pa=> add(RL.stepState(env,C[0],C[1],pa), slip));
+    return d;
+  }
+  function render(){
+    const d=dist(intended);
+    const V=[];
+    for(let r=0;r<3;r++){ V.push([]); for(let c=0;c<3;c++){ const p=d[r+','+c]||0; V[r].push(p); } }
+    document.getElementById('gw1').innerHTML = RL.gridSVG(env, {cell:64, V, vmax:1, showVals:true, agent:C, highlight:sample});
+    document.getElementById('info1').innerHTML =
+      `<div class="ttl" style="color:var(--q)">의도: ${RL.ACT[intended].sym} (${RL.ACT[intended].name})</div>
+       <p style="margin:0">실제 도착 확률: 의도 방향 <b>${((1-2*slip)*100).toFixed(0)}%</b>, 양옆 각 <b>${(slip*100).toFixed(0)}%</b>. (벽이면 제자리로 합쳐져요.)</p>`;
+  }
+  const P=[['sp',0,'sp'],[2,'sp',3],['sp',1,'sp']];
+  document.getElementById('pad1').innerHTML = P.flat().map(x=>
+    x==='sp'?`<button class="sp"></button>`:`<button data-a="${x}">${RL.ACT[x].sym}</button>`).join('');
+  document.getElementById('pad1').querySelectorAll('button[data-a]').forEach(b=>b.onclick=()=>{ intended=+b.dataset.a; sample=null; render(); });
+  document.getElementById('slip').oninput=e=>{ slip=e.target.value/100; document.getElementById('slipv').textContent=e.target.value+'%'; sample=null; render(); };
+  document.getElementById('roll').onclick=()=>{
+    const x=Math.random(); let a;
+    if(x<1-2*slip) a=intended; else if(x<1-slip) a=PERP[intended][0]; else a=PERP[intended][1];
+    sample=RL.stepState(env,C[0],C[1],a); render();
+  };
+  render();
+})();
+
+// ---------- STEP 2 : 정책과 궤적 ----------
+(function(){
+  const env={rows:4, cols:4, start:[3,0], goal:[0,3], pit:[1,3]};
+  const SLIP=0.15;
+  let policy='goal', busy=false, cancel=null;
+  // 목표 지향 정책 = 함정을 피해 목표로 가는 최단경로(목표에서 역방향 BFS). 함정 향한 화살표가 절대 안 생겨요.
+  const GOALP = (function(){
+    const [gr,gc]=env.goal, key=(r,c)=>r+','+c, dist={};
+    dist[key(gr,gc)]=0; const q=[[gr,gc]];
+    while(q.length){ const [r,c]=q.shift();
+      for(const a of [0,1,2,3]){ const nr=r+RL.ACT[a].dr, nc=c+RL.ACT[a].dc;
+        if(nr<0||nc<0||nr>=env.rows||nc>=env.cols||RL.isWall(env,nr,nc)||RL.isPit(env,nr,nc)) continue;
+        if(dist[key(nr,nc)]==null){ dist[key(nr,nc)]=dist[key(r,c)]+1; q.push([nr,nc]); } } }
+    const P=[];
+    for(let r=0;r<env.rows;r++){ P.push([]); for(let c=0;c<env.cols;c++){
+      if(RL.isWall(env,r,c)||RL.isTerminal(env,r,c)){ P[r].push(null); continue; }
+      let best=null,bd=Infinity;
+      for(const a of [0,1,2,3]){ const nr=r+RL.ACT[a].dr,nc=c+RL.ACT[a].dc;
+        if(nr<0||nc<0||nr>=env.rows||nc>=env.cols||RL.isWall(env,nr,nc)||RL.isPit(env,nr,nc)) continue;
+        const d=dist[key(nr,nc)]; if(d!=null && d<bd){bd=d; best=a;} }
+      P[r].push(best); } }
+    return P;
+  })();
+  function polAction(r,c){ return policy==='right'? 3 : (GOALP[r][c]!=null?GOALP[r][c]:3); }
+  function polGrid(){
+    const P=[]; for(let r=0;r<4;r++){ P.push([]); for(let c=0;c<4;c++){
+      P[r].push(RL.isWall(env,r,c)||RL.isTerminal(env,r,c)?null:(policy==='right'?3:GOALP[r][c])); } }
+    return P;
+  }
+  function stoch(r,c,a){
+    const x=Math.random(); let act;
+    if(x<1-2*SLIP) act=a; else if(x<1-SLIP) act=PERP[a][0]; else act=PERP[a][1];
+    return RL.stepState(env,r,c,act);
+  }
+  function render(trail, agent){
+    document.getElementById('gw2').innerHTML = RL.gridSVG(env, {cell:60, policy:polGrid(), agent:agent||env.start, trail});
+  }
+  function episode(){
+    let [r,c]=env.start, steps=0, ret=0; const trail=[[r,c]];
+    while(!RL.isTerminal(env,r,c) && steps<50){
+      [r,c]=stoch(r,c,polAction(r,c)); ret += RL.isGoal(env,r,c)?1:RL.isPit(env,r,c)?-1:-0.04;
+      steps++; trail.push([r,c]);
+    }
+    return {trail, steps, ret, win:RL.isGoal(env,r,c)};
+  }
+  function playOne(){
+    if(busy) return; busy=true;
+    const {trail,steps,ret,win}=episode();
+    cancel = VZ.stepLight(trail, (pos,i)=>{
+      render(trail.slice(0,i+1), pos);
+      if(i===trail.length-1){
+        document.getElementById('info2').innerHTML =
+          `<div class="ttl">${win?'⭐ 도착':'🕳️ 함정/시간초과'} · ${steps}걸음 · 보상합 ${VZ.fmt(ret,2)}</div>
+           <p style="margin:0">같은 정책이라도 미끄럼 때문에 매번 길이 달라요. 다시 돌려보세요.</p>`;
+        busy=false; cancel=null;
+      }
+    }, Math.min(90, 700/trail.length));
+  }
+  function playMany(n){
+    if(busy) return;
+    let wins=0, sumSteps=0, sumRet=0;
+    for(let k=0;k<n;k++){ const e=episode(); if(e.win)wins++; sumSteps+=e.steps; sumRet+=e.ret; }
+    render(null, env.start);
+    document.getElementById('info2').innerHTML =
+      `<div class="ttl">${n}번 평균 — 도착 ${wins}/${n} · 평균 ${(sumSteps/n).toFixed(1)}걸음 · 평균 보상 ${VZ.fmt(sumRet/n,2)}</div>
+       <p style="margin:0">결과가 <b>흩어지죠</b>. 그래서 정책의 좋음은 한 판이 아니라 <b>평균</b>으로 잽니다.</p>`;
+  }
+  function setPolicy(p){ policy=p;
+    document.getElementById('polGoal').style.cssText = p==='goal'?'':'border-color:var(--line);background:var(--panel-2);color:var(--muted)';
+    document.getElementById('polRight').style.cssText = p==='right'?'':'border-color:var(--line);background:var(--panel-2);color:var(--muted)';
+    if(cancel){cancel();cancel=null;} busy=false; render(null, env.start);
+    document.getElementById('info2').innerHTML='▶로 에피소드를 돌려 궤적을 보세요.';
+  }
+  document.getElementById('polGoal').onclick=()=>setPolicy('goal');
+  document.getElementById('polRight').onclick=()=>setPolicy('right');
+  document.getElementById('run2').onclick=playOne;
+  document.getElementById('run2x').onclick=()=>playMany(10);
+  setPolicy('goal');
+})();
+
+// ---------- STEP 3 : MDP 5요소 ----------
+(function(){
+  const FIVE=[
+    ['상태 S','var(--q)','지금 상황(예: 격자 위 위치). 결정에 필요한 정보를 담아요.'],
+    ['행동 A','var(--hot)','각 상태에서 할 수 있는 선택(상·하·좌·우).'],
+    ['전이 P','var(--v)','행동 후 다음 상태가 정해지는 확률 P(s′|s,a). 확률적일 수 있어요.'],
+    ['보상 R','var(--good)','전이마다 받는 즉각 점수. "무엇이 좋은지"를 정의.'],
+    ['정책 π','var(--pink)','상태→행동 규칙. RL이 찾으려는 대상.'],
+  ];
+  document.getElementById('mdp5').innerHTML = FIVE.map(f=>
+    `<div class="c"><b style="color:${f[1]}">${f[0]}</b><div class="d">${f[2]}</div></div>`).join('');
+})();
+</script>
+</body>
+</html>
