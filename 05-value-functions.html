@@ -109,20 +109,7 @@ const reward=(r,c)=> RL.isGoal(env,r,c)?1 : RL.isPit(env,r,c)?-1 : STEP;
 const cells=()=>{ const a=[]; for(let r=0;r<4;r++)for(let c=0;c<4;c++) a.push([r,c]); return a; };
 
 // 함정 회피 최단경로 정책(BFS) — '똑똑한 정책'
-const GOODP=(function(){
-  const [gr,gc]=env.goal, key=(r,c)=>r+','+c, dist={}; dist[key(gr,gc)]=0; const q=[[gr,gc]];
-  while(q.length){ const [r,c]=q.shift();
-    for(const a of [0,1,2,3]){ const nr=r+RL.ACT[a].dr,nc=c+RL.ACT[a].dc;
-      if(nr<0||nc<0||nr>=4||nc>=4||RL.isPit(env,nr,nc)) continue;
-      if(dist[key(nr,nc)]==null){ dist[key(nr,nc)]=dist[key(r,c)]+1; q.push([nr,nc]); } } }
-  const P={};
-  cells().forEach(([r,c])=>{ if(RL.isTerminal(env,r,c))return; let best=null,bd=1e9;
-    for(const a of [0,1,2,3]){ const nr=r+RL.ACT[a].dr,nc=c+RL.ACT[a].dc;
-      if(nr<0||nc<0||nr>=4||nc>=4||RL.isPit(env,nr,nc)) continue;
-      const d=dist[key(nr,nc)]; if(d!=null&&d<bd){bd=d;best=a;} }
-    P[key(r,c)]= best!=null?best:3; });
-  return P;
-})();
+const GOODP=RL.shortestPathPolicy(env);   // 함정 회피 최단경로 정책 — 공유 엔진
 
 // 행동 분포: 정책별
 function actionDist(kind, r, c){

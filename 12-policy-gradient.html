@@ -124,7 +124,7 @@ VZ.setupStepper();
   function reset(){ H=[0,0,0]; baseline=0; cnt=0; steps=0; hist=[]; render(); info('정책은 처음엔 균등(33%씩). +50, +500을 눌러 학습시켜 보세요.'); }
   function pi(){ return VZ.softmax(H); }
   function step(){
-    const p=pi(); let r=Math.random(), a=0, acc=0; for(let i=0;i<n;i++){ acc+=p[i]; if(r<acc){a=i;break;} }
+    const p=pi(); const a=VZ.RL.sampleCategorical(p);
     const R = Math.random()<TRUE[a] ? 1 : 0; cnt++; baseline += (R-baseline)/cnt;
     for(let i=0;i<n;i++) H[i] += ALPHA*(R-baseline)*((i===a?1:0)-p[i]);   // 정책경사 갱신
     steps++;

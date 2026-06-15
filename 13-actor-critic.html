@@ -115,7 +115,7 @@ const RL = VZ.RL;
   function episode(){
     let [r,c]=env.start, steps=0, R=0;
     while(!RL.isTerminal(env,r,c) && steps<60){
-      const p=VZ.softmax(H[K(r,c)]); let x=Math.random(), a=0, acc=0; for(let i=0;i<4;i++){ acc+=p[i]; if(x<acc){a=i;break;} }
+      const p=VZ.softmax(H[K(r,c)]); const a=RL.sampleCategorical(p);
       const [nr,nc]=RL.stepState(env,r,c,a); const rw=reward(nr,nc); R+=rw;
       const delta = rw + (RL.isTerminal(env,nr,nc)?0:GAMMA*V[K(nr,nc)]) - V[K(r,c)];
       V[K(r,c)] += AC*delta;                                  // Critic 갱신

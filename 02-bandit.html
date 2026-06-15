@@ -108,7 +108,7 @@ VZ.setupStepper();
 const TRUE=[0.25,0.5,0.65,0.4];          // 숨은 당첨 확률
 const BEST=2;                             // 최적 기계(0.65)
 const NAME=['A','B','C','D'], FACE=['🎰','🎰','🎰','🎰'];
-const amax=a=>{const mx=Math.max(...a),idx=[];a.forEach((x,i)=>{if(x===mx)idx.push(i);});return idx[Math.floor(Math.random()*idx.length)];};
+const amax=VZ.RL.argmaxRandom;   // 동률 무작위 argmax (엔진 공유)
 const pull=i=> Math.random()<TRUE[i] ? 1 : 0;
 
 // ---------- STEP 0 : 직접 당기기 ----------

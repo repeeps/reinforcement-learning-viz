@@ -270,7 +270,7 @@ const RL = VZ.RL;
   document.getElementById('slotReset').onclick=reset;
 
   // 동점이면 무작위 선택 (RL.argmax는 첫 인덱스 고정 → greedy가 1번 기계로 쏠려 부당해짐).
-  const amax=a=>{const mx=Math.max(...a),idx=[];a.forEach((x,i)=>{if(x===mx)idx.push(i);});return idx[Math.floor(Math.random()*idx.length)];};
+  const amax=RL.argmaxRandom;   // 동률 무작위 argmax (엔진 공유)
   // 전략 비교 시뮬레이션
   // 공정성: 두 전략 모두 처음 3턴은 각 기계를 한 번씩 워밍업한 뒤 —
   //  greedy=그때 제일 좋아 보인 것만 계속, ε-greedy=10% 확률로 가끔 다른 것도 시도.

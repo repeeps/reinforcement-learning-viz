@@ -413,7 +413,51 @@
     return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="1차원 길" style="max-width:100%;display:block">${defs}${cells}${over}</svg>`;
   }
 
-  VZ.RL = { ACT, keyOf, argmax, asPits, isWall, isGoal, isPit, isTerminal, stepState, valColor, gridSVG, stripSVG };
+  // ---- 학습용 공통 헬퍼 (여러 챕터가 공유) ----
+  // 동률이면 무작위로 고르는 argmax (학습 행동선택용 — RL.argmax는 결정적 첫 인덱스 고정)
+  const argmaxRandom = (arr) => { const mx = Math.max(...arr), idx = []; arr.forEach((x, i) => { if (x === mx) idx.push(i); }); return idx[Math.floor(Math.random() * idx.length)]; };
+
+  // 의도 행동의 수직(perpendicular) 행동: 상↔[좌,우], 하↔[좌,우], 좌↔[상,하], 우↔[상,하]
+  const PERP = { 0: [2, 3], 1: [2, 3], 2: [0, 1], 3: [0, 1] };
+  // 확률적 전이 분포 P(s'|s,a): 의도 1−2ε, 양옆 각 ε (벽/경계면 제자리로 합산). 반환 {"r,c":prob}
+  function transDist(env, r, c, a, slip) {
+    const d = {}; const add = (rc, p) => { const k = keyOf(rc[0], rc[1]); d[k] = (d[k] || 0) + p; };
+    add(stepState(env, r, c, a), 1 - 2 * slip);
+    PERP[a].forEach(pa => add(stepState(env, r, c, pa), slip));
+    return d;
+  }
+  // 확률적 전이 1회 샘플 → [r,c]
+  function sampleNext(env, r, c, a, slip) {
+    const x = Math.random(); let act;
+    if (x < 1 - 2 * slip) act = a; else if (x < 1 - slip) act = PERP[a][0]; else act = PERP[a][1];
+    return stepState(env, r, c, act);
+  }
+  // 확률분포(합=1)에서 인덱스 1개 샘플 (누적분포 역변환)
+  function sampleCategorical(probs) {
+    const x = Math.random(); let acc = 0;
+    for (let i = 0; i < probs.length; i++) { acc += probs[i]; if (x < acc) return i; }
+    return probs.length - 1;
+  }
+  // 함정·벽을 피해 목표로 가는 최단경로 정책 (목표에서 역방향 BFS). 반환 {"r,c":행동}
+  function shortestPathPolicy(env) {
+    const [gr, gc] = env.goal, dist = {}; dist[keyOf(gr, gc)] = 0; const q = [[gr, gc]];
+    while (q.length) { const [r, c] = q.shift();
+      for (const a of [0, 1, 2, 3]) { const nr = r + ACT[a].dr, nc = c + ACT[a].dc;
+        if (nr < 0 || nc < 0 || nr >= env.rows || nc >= env.cols || isWall(env, nr, nc) || isPit(env, nr, nc)) continue;
+        if (dist[keyOf(nr, nc)] == null) { dist[keyOf(nr, nc)] = dist[keyOf(r, c)] + 1; q.push([nr, nc]); } } }
+    const P = {};
+    for (let r = 0; r < env.rows; r++) for (let c = 0; c < env.cols; c++) {
+      if (isWall(env, r, c) || isTerminal(env, r, c)) continue;
+      let best = null, bd = Infinity;
+      for (const a of [0, 1, 2, 3]) { const nr = r + ACT[a].dr, nc = c + ACT[a].dc;
+        if (nr < 0 || nc < 0 || nr >= env.rows || nc >= env.cols || isWall(env, nr, nc) || isPit(env, nr, nc)) continue;
+        const d = dist[keyOf(nr, nc)]; if (d != null && d < bd) { bd = d; best = a; } }
+      P[keyOf(r, c)] = best != null ? best : 3;
+    }
+    return P;
+  }
+
+  VZ.RL = { ACT, keyOf, argmax, argmaxRandom, asPits, isWall, isGoal, isPit, isTerminal, stepState, valColor, gridSVG, stripSVG, PERP, transDist, sampleNext, sampleCategorical, shortestPathPolicy };
 })(window);
 
 /* ============================================================

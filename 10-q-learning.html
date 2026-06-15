@@ -100,7 +100,7 @@
 VZ.mountTopnav('#topnav', 'CH 10 · Q-learning');
 VZ.setupStepper();
 const RL = VZ.RL;
-const argmaxTie=a=>{ const mx=Math.max(...a),idx=[]; a.forEach((x,i)=>{if(x===mx)idx.push(i);}); return idx[Math.floor(Math.random()*idx.length)]; };
+const argmaxTie=RL.argmaxRandom;   // 동률 무작위 argmax (엔진 공유)
 
 // ---------- STEP 1 : Q-learning (4x4) ----------
 (function(){

@@ -99,34 +99,16 @@ VZ.setupStepper();
 const RL = VZ.RL;
 const GAMMA=0.9, STEP=-0.04, SLIP=0.10;
 const env={rows:4, cols:4, goal:[0,3], pit:[1,3]};
-const PERP={0:[2,3],1:[2,3],2:[0,1],3:[0,1]};
 const reward=(r,c)=> RL.isGoal(env,r,c)?1 : RL.isPit(env,r,c)?-1 : STEP;
 const cells=()=>{ const a=[]; for(let r=0;r<4;r++)for(let c=0;c<4;c++)a.push([r,c]); return a; };
 const K=(r,c)=>r+','+c;
 const nonTerm=()=>cells().filter(([r,c])=>!RL.isTerminal(env,r,c));
 
-// 함정 회피 최단경로 정책(BFS)
-const POL=(function(){
-  const [gr,gc]=env.goal, dist={}; dist[K(gr,gc)]=0; const q=[[gr,gc]];
-  while(q.length){ const [r,c]=q.shift();
-    for(const a of [0,1,2,3]){ const nr=r+RL.ACT[a].dr,nc=c+RL.ACT[a].dc;
-      if(nr<0||nc<0||nr>=4||nc>=4||RL.isPit(env,nr,nc)) continue;
-      if(dist[K(nr,nc)]==null){ dist[K(nr,nc)]=dist[K(r,c)]+1; q.push([nr,nc]); } } }
-  const P={};
-  nonTerm().forEach(([r,c])=>{ let best=null,bd=1e9;
-    for(const a of [0,1,2,3]){ const nr=r+RL.ACT[a].dr,nc=c+RL.ACT[a].dc;
-      if(nr<0||nc<0||nr>=4||nc>=4||RL.isPit(env,nr,nc)) continue;
-      const d=dist[K(nr,nc)]; if(d!=null&&d<bd){bd=d;best=a;} }
-    P[K(r,c)]= best!=null?best:3; });
-  return P;
-})();
+// 함정 회피 최단경로 정책(BFS) + 확률적 전이/샘플 — 공유 엔진
+const POL=RL.shortestPathPolicy(env);
 function polGrid(){ const g=[]; for(let r=0;r<4;r++){g.push([]);for(let c=0;c<4;c++){g[r].push(RL.isTerminal(env,r,c)?null:POL[K(r,c)]);}} return g; }
-// 확률적 전이 분포 / 샘플
-function transDist(r,c,a){ const d={}; const add=(rc,p)=>{ const k=K(rc[0],rc[1]); d[k]=(d[k]||0)+p; };
-  add(RL.stepState(env,r,c,a),1-2*SLIP); PERP[a].forEach(pa=>add(RL.stepState(env,r,c,pa),SLIP)); return d; }
-function sampleNext(r,c,a){ const x=Math.random(); let act;
-  if(x<1-2*SLIP) act=a; else if(x<1-SLIP) act=PERP[a][0]; else act=PERP[a][1];
-  return RL.stepState(env,r,c,act); }
+const transDist=(r,c,a)=>RL.transDist(env,r,c,a,SLIP);
+const sampleNext=(r,c,a)=>RL.sampleNext(env,r,c,a,SLIP);
 // 참값 V^π (확률적 전이 정책평가)
 const TRUEV=(function(){
   let V={}; cells().forEach(([r,c])=>V[K(r,c)]=0);
