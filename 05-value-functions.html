@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>05 가치함수 V와 Q · 강화학습, 눈으로 보기</title>
+<link rel="stylesheet" href="shared/theme.css">
+<style>
+  .gridwrap{display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;}
+  .legend{font-size:12px; color:var(--faint); line-height:1.7; font-family:'JetBrains Mono',monospace;}
+  #gw1{cursor:pointer;}
+  .qrow{display:grid; grid-template-columns:54px 1fr 60px; gap:10px; align-items:center; margin:6px 0;}
+  .qrow .lab{font-weight:700; text-align:right;}
+  .qrow .track{height:20px; border-radius:6px; background:var(--panel-2); border:1px solid var(--line); overflow:hidden; position:relative;}
+  .qrow .fill{height:100%;}
+  .qrow .v{font-family:'JetBrains Mono',monospace; font-size:13px; text-align:right; color:var(--muted);}
+  .qrow.best .lab{color:var(--hot);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topnav" id="topnav"></div>
+
+  <header>
+    <div class="tag">PART 2 · Chapter 05</div>
+    <h1>가치함수 V와 Q — "여기서 시작하면 얼마나 좋은가"</h1>
+    <p class="intro">정책이 정해지면, 각 상태에는 <b>"여기서 시작해 정책을 따라가면 받을 기대 리턴"</b>이라는 점수가 생겨요. 이게 <b>상태가치 V(s)</b>. 한 걸음 더 들어가 "이 상태에서 <b>이 행동</b>을 했을 때의 가치"가 <b>행동가치 Q(s,a)</b>예요. 가치를 알면 좋은 행동이 보여요.</p>
+  </header>
+
+  <nav class="stepper" id="stepper">
+    <button data-s="0" class="active">00 · 가치란</button>
+    <button data-s="1">01 · V와 Q</button>
+    <button data-s="2">02 · 정책마다 다르다</button>
+    <button data-s="3">03 · 정리</button>
+  </nav>
+
+  <!-- STEP 0 -->
+  <section class="panel show" data-panel="0">
+    <span class="kicker" style="color:var(--hot)">Step 00 — What is Value</span>
+    <h2>각 칸의 "앞으로 받을 기대 점수"</h2>
+    <p class="lead">아래는 어떤 정책(화살표)을 따를 때의 <b>상태가치 V</b>예요. 목표(⭐)에 가깝고 길이 좋은 칸일수록 <b>가치가 높아요</b>(초록). 함정(🕳️) 근처는 낮고요(빨강). 이 숫자는 정책평가로 <b>실제 계산</b>한 기대 리턴이에요.</p>
+    <div class="gridwrap">
+      <div><div id="gw0"></div>
+        <div class="legend" style="margin-top:8px">숫자 = V(s) = 그 칸에서 정책 따라갈 때 기대 리턴 · 초록↑ 빨강↓ · 화살표 = 정책</div></div>
+      <div style="flex:1;min-width:200px"><div class="callout q" id="info0"></div></div>
+    </div>
+    <p class="note" style="margin-top:14px">→ "가치"는 즉각 보상이 아니라 <b>앞으로 받을 보상의 합(리턴)의 기댓값</b>이에요. 멀어도 결국 큰 보상으로 이어지는 칸은 가치가 높아요. <span style="color:var(--faint)">(이 장은 직관을 위해 <b>안 미끄러지는 결정적 격자</b>로 둬요. 3장처럼 미끄러지면 V는 "도착 가능한 칸들의 가중평균"이 돼요 — '기댓값'이라는 본질은 똑같아요.)</span></p>
+  </section>
+
+  <!-- STEP 1 -->
+  <section class="panel" data-panel="1">
+    <span class="kicker" style="color:var(--q)">Step 01 — V vs Q</span>
+    <h2>상태의 가치 V, 행동의 가치 Q</h2>
+    <p class="lead"><b>칸을 클릭</b>하면 그 상태의 네 행동에 대한 <b>Q(s,a)</b>를 봐요. Q(s,a) = "그 행동으로 한 걸음 간 뒤(보상) + 도착한 칸의 가치". <b>V는 정책이 고른 행동의 Q</b>와 같아요(최적 정책이면 V = 가장 큰 Q).</p>
+    <div class="gridwrap">
+      <div><div id="gw1"></div>
+        <div class="legend" style="margin-top:8px">칸 클릭 → 행동별 Q · 노란 테두리 = 선택한 칸</div></div>
+      <div style="flex:1;min-width:230px">
+        <div id="qpanel" class="callout q"></div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:14px">→ Q는 "행동 하나하나"를 평가해요. 그래서 <b>최적 Q(Q*)만 알면 정책이 필요 없어요</b> — 각 상태에서 Q*가 가장 큰 행동을 고르면 되니까(10장 Q-learning의 핵심). (지금 보는 Q는 특정 정책의 Q^π라, 마침 이 정책이 최적이라 둘이 일치해요.)</p>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="panel" data-panel="2">
+    <span class="kicker" style="color:var(--v)">Step 02 — Value Depends on Policy</span>
+    <h2>가치는 "어떤 정책이냐"에 달렸다</h2>
+    <p class="lead">같은 격자라도 <b>정책이 바뀌면 가치도 바뀌어요</b>. 좋은 정책은 높은 가치를, 엉성한 정책은 낮은 가치를 만들어요. 정책을 바꿔 V 히트맵이 어떻게 변하는지 보세요.</p>
+    <div class="row" style="gap:8px;margin-bottom:8px">
+      <span class="note">정책:</span>
+      <button class="btn" id="pGood">🎯 똑똑한 정책</button>
+      <button class="btn" id="pRand" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">🎲 무작위</button>
+      <button class="btn" id="pUp" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">⬆ 무조건 위</button>
+    </div>
+    <div class="gridwrap">
+      <div><div id="gw2"></div></div>
+      <div style="flex:1;min-width:210px"><div class="callout v" id="info2"></div></div>
+    </div>
+    <p class="note" style="margin-top:14px">→ 무작위·엉뚱한 정책은 가치가 전반적으로 낮아요(헤매거나 함정에 빠지니까). "가치를 높이는 정책 찾기" = 강화학습의 목표예요.</p>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="panel" data-panel="3">
+    <span class="kicker" style="color:var(--good)">Step 03 — Recap</span>
+    <h2>V와 Q, 그리고 최적 가치</h2>
+    <div class="twocol" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="callout q"><div class="ttl">상태가치 V(s)</div><p style="margin:0">그 <b>상태</b>에서 정책 따라갈 때의 기대 리턴. "여기 있는 게 얼마나 좋은가."</p></div>
+      <div class="callout v"><div class="ttl">행동가치 Q(s,a)</div><p style="margin:0">그 상태에서 <b>특정 행동</b>을 한 뒤 정책 따라갈 때의 기대 리턴. "이 행동이 얼마나 좋은가."</p></div>
+    </div>
+    <div class="callout good" style="margin-top:14px">
+      <div class="ttl">최적 가치 V*, Q*</div>
+      <p style="margin:0">가능한 <b>모든 정책 중 가장 높은</b> 가치가 최적 가치예요. Q*를 알면 각 상태에서 <b>가장 큰 Q*의 행동</b>을 고르는 게 곧 최적 정책. RL은 결국 이 최적 가치(또는 정책)를 찾는 일이에요.</p>
+    </div>
+    <p class="note" style="margin-top:16px">→ 그런데 가치를 <b>어떻게 계산</b>할까요? 가치끼리 얽힌 관계 — 다음 <b>6장 벨만 방정식</b>이 그 열쇠예요.</p>
+  </section>
+
+  <p class="foot">// 수식 없는 직관 입문 · 모든 가치는 정책평가로 브라우저에서 실시간 계산 · <a href="index.html">목차</a></p>
+</div>
+
+<script src="shared/lib.js"></script>
+<script>
+VZ.mountTopnav('#topnav', 'CH 05 · 가치함수');
+VZ.setupStepper();
+const RL = VZ.RL;
+const GAMMA=0.9, STEP=-0.04;
+const env={rows:4, cols:4, goal:[0,3], pit:[1,3]};
+const reward=(r,c)=> RL.isGoal(env,r,c)?1 : RL.isPit(env,r,c)?-1 : STEP;
+const cells=()=>{ const a=[]; for(let r=0;r<4;r++)for(let c=0;c<4;c++) a.push([r,c]); return a; };
+
+// 함정 회피 최단경로 정책(BFS) — '똑똑한 정책'
+const GOODP=(function(){
+  const [gr,gc]=env.goal, key=(r,c)=>r+','+c, dist={}; dist[key(gr,gc)]=0; const q=[[gr,gc]];
+  while(q.length){ const [r,c]=q.shift();
+    for(const a of [0,1,2,3]){ const nr=r+RL.ACT[a].dr,nc=c+RL.ACT[a].dc;
+      if(nr<0||nc<0||nr>=4||nc>=4||RL.isPit(env,nr,nc)) continue;
+      if(dist[key(nr,nc)]==null){ dist[key(nr,nc)]=dist[key(r,c)]+1; q.push([nr,nc]); } } }
+  const P={};
+  cells().forEach(([r,c])=>{ if(RL.isTerminal(env,r,c))return; let best=null,bd=1e9;
+    for(const a of [0,1,2,3]){ const nr=r+RL.ACT[a].dr,nc=c+RL.ACT[a].dc;
+      if(nr<0||nc<0||nr>=4||nc>=4||RL.isPit(env,nr,nc)) continue;
+      const d=dist[key(nr,nc)]; if(d!=null&&d<bd){bd=d;best=a;} }
+    P[key(r,c)]= best!=null?best:3; });
+  return P;
+})();
+
+// 행동 분포: 정책별
+function actionDist(kind, r, c){
+  if(kind==='rand') return [0,1,2,3].map(a=>({a, p:0.25}));
+  if(kind==='up') return [{a:0, p:1}];
+  return [{a:GOODP[r+','+c], p:1}];   // good
+}
+// 정책평가: V^π (결정/확률 정책, 결정적 전이)
+function evalV(kind){
+  let V={}; cells().forEach(([r,c])=>V[r+','+c]=0);
+  for(let it=0; it<300; it++){
+    const nV={};
+    cells().forEach(([r,c])=>{
+      const k=r+','+c;
+      if(RL.isTerminal(env,r,c)){ nV[k]=0; return; }
+      let v=0;
+      actionDist(kind,r,c).forEach(({a,p})=>{
+        const [nr,nc]=RL.stepState(env,r,c,a);
+        v += p*( reward(nr,nc) + (RL.isTerminal(env,nr,nc)?0:GAMMA*V[nr+','+nc]) );
+      });
+      nV[k]=v;
+    });
+    V=nV;
+  }
+  return V;
+}
+function Vgrid(V){ const g=[]; for(let r=0;r<4;r++){g.push([]);for(let c=0;c<4;c++){g[r].push(RL.isTerminal(env,r,c)?0:V[r+','+c]);}} return g; }
+function polGrid(kind){ const g=[]; for(let r=0;r<4;r++){g.push([]);for(let c=0;c<4;c++){
+  g[r].push(RL.isTerminal(env,r,c)? null : (kind==='rand'?null : actionDist(kind,r,c)[0].a)); }} return g; }
+// Q(s,a) = 보상 + γ·V(도착칸)
+function Qval(V,r,c,a){ const [nr,nc]=RL.stepState(env,r,c,a); return reward(nr,nc)+(RL.isTerminal(env,nr,nc)?0:GAMMA*V[nr+','+nc]); }
+
+// ---------- STEP 0 ----------
+(function(){
+  const V=evalV('good');
+  document.getElementById('gw0').innerHTML = RL.gridSVG(env,{cell:62, V:Vgrid(V), policy:polGrid('good'), showVals:true});
+  document.getElementById('info0').innerHTML =
+    `<div class="ttl" style="color:var(--q)">정책평가로 계산한 V</div>
+     <p style="margin:0">시작 칸(좌하 등)에서 멀어도, 길이 목표로 이어지면 가치가 점점 커져요. γ=0.9라 멀수록 살짝 작아지죠(할인).</p>`;
+})();
+
+// ---------- STEP 1 : 클릭 → Q ----------
+(function(){
+  const V=evalV('good');
+  let sel=[3,0];
+  function render(){
+    document.getElementById('gw1').innerHTML = RL.gridSVG(env,{cell:62, V:Vgrid(V), policy:polGrid('good'), showVals:true, highlight:sel});
+    const [r,c]=sel;
+    if(RL.isTerminal(env,r,c)){
+      document.getElementById('qpanel').innerHTML=`<div class="ttl" style="color:var(--q)">(${r},${c}) — 종료 상태</div><p style="margin:0">목표/함정은 종료라 가치 0(여기서 더 받을 게 없어요). 다른 칸을 클릭해보세요.</p>`;
+      return;
+    }
+    const qs=[0,1,2,3].map(a=>({a, q:Qval(V,r,c,a)}));
+    const best=Math.max(...qs.map(x=>x.q)), polA=GOODP[r+','+c];
+    const maxAbs=Math.max(0.01, ...qs.map(x=>Math.abs(x.q)));   // 0 기준 절대크기 정규화
+    const rows=qs.map(({a,q})=>{
+      const frac=Math.abs(q)/maxAbs, isPol=a===polA;
+      const col = q<0 ? 'var(--k)' : (q===best ? 'var(--hot)' : 'var(--q)');  // 음수=처벌(코랄)
+      return `<div class="qrow ${q===best?'best':''}">
+        <div class="lab">${RL.ACT[a].sym} ${RL.ACT[a].name}</div>
+        <div class="track"><div class="fill" style="width:${(frac*100).toFixed(0)}%;background:${col}"></div></div>
+        <div class="v">${VZ.fmt(q,2)}${isPol?' ◀π':''}</div></div>`;
+    }).join('');
+    document.getElementById('qpanel').innerHTML =
+      `<div class="ttl" style="color:var(--q)">상태 (${r},${c}) · V = ${VZ.fmt(V[r+','+c],2)}</div>
+       ${rows}
+       <p style="margin:8px 0 0;font-size:12.5px">◀π = 정책이 고른 행동. V는 그 행동의 Q와 같아요. 가장 큰 Q(노랑)가 최선의 행동.</p>`;
+  }
+  document.getElementById('gw1').addEventListener('click', e=>{
+    const svg=e.currentTarget.querySelector('svg'); if(!svg) return;
+    const rect=svg.getBoundingClientRect(), cell=62*rect.width/svg.viewBox.baseVal.width, pad=12*rect.width/svg.viewBox.baseVal.width;
+    const c=Math.floor((e.clientX-rect.left-pad)/cell), r=Math.floor((e.clientY-rect.top-pad)/cell);
+    if(r>=0&&r<4&&c>=0&&c<4){ sel=[r,c]; render(); }
+  });
+  render();
+})();
+
+// ---------- STEP 2 : 정책마다 다르다 ----------
+(function(){
+  let kind='good';
+  function render(){
+    const V=evalV(kind);
+    document.getElementById('gw2').innerHTML = RL.gridSVG(env,{cell:62, V:Vgrid(V), policy:polGrid(kind), showVals:true});
+    const vals=cells().filter(([r,c])=>!RL.isTerminal(env,r,c)).map(([r,c])=>V[r+','+c]);
+    const avg=vals.reduce((a,b)=>a+b,0)/vals.length;
+    const label={good:'똑똑한 정책(함정 회피 최단경로)', rand:'무작위 정책(매 칸 4방향 균등)', up:'무조건 위로만'}[kind];
+    document.getElementById('info2').innerHTML =
+      `<div class="ttl" style="color:var(--v)">${label}</div>
+       <p style="margin:0">평균 가치 ≈ <b>${VZ.fmt(avg,2)}</b>. ${kind==='good'?'목표로 효율적으로 이어져 가치가 높아요.':kind==='rand'?'헤매고 함정에도 빠져서 가치가 확 낮아져요. <span style="color:var(--faint)">(무작위는 정해진 한 방향이 없어 화살표를 안 그렸어요 — 매 칸 4방향 25%.)</span>':'위로만 가면 목표 열에 못 붙는 칸이 많아 비효율적이에요.'}</p>`;
+  }
+  function set(k, on){ kind=k;
+    [['pGood','good'],['pRand','rand'],['pUp','up']].forEach(([id,kk])=>{
+      document.getElementById(id).style.cssText = kk===k?'':'border-color:var(--line);background:var(--panel-2);color:var(--muted)'; });
+    render();
+  }
+  document.getElementById('pGood').onclick=()=>set('good');
+  document.getElementById('pRand').onclick=()=>set('rand');
+  document.getElementById('pUp').onclick=()=>set('up');
+  set('good');
+})();
+</script>
+</body>
+</html>
