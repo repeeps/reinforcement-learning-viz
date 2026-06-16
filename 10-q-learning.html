@@ -46,6 +46,7 @@
     <span class="kicker" style="color:var(--q)">Step 01 — Q-learning</span>
     <h2>경험으로 Q를 채우면, 정책이 떠오른다</h2>
     <p class="lead">에이전트가 ε-greedy로 돌아다니며 매 걸음 <b>Q(s,a) ← Q + α[r + γ·maxₐ′Q(s′,a′) − Q]</b> 로 갱신해요. 처음엔 엉망이지만 에피소드가 쌓이면 <b>최적 정책</b>(화살표)과 가치(색)가 나타나요. (모델은 전혀 안 썼어요!)</p>
+    <p class="note" style="margin-top:-2px;color:var(--faint)">기호 메모: <b>maxₐ′ Q(s′,a′)</b> = "도착한 칸 s′에서 고를 수 있는 행동들 중 <b>가장 큰 Q값</b>"이에요(a′=그 다음 행동 후보). 그리고 탐험률 <b>ε는 학습 초반엔 크게(많이 탐험) 시작해 점점 줄어들어요</b> — 그래서 곡선이 처음엔 출렁이다 점점 안정돼요.</p>
     <div class="row" style="gap:8px;margin-bottom:8px">
       <button class="btn" id="e10">+10 에피소드</button><button class="btn" id="e100">+100</button>
       <button class="btn" id="reset1" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">↺ 리셋</button>

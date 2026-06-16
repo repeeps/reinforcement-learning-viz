@@ -59,11 +59,11 @@
   <section class="panel" data-panel="1">
     <span class="kicker" style="color:var(--q)">Step 01 — Learning from Reward</span>
     <h2>보상만 주면, 길을 스스로 찾는다</h2>
-    <p class="lead">로봇(🤖)이 <b>⭐ 목표</b>에 닿으면 <b>+1</b>, <b>🕳️ 함정</b>에 빠지면 <b>−1</b>, 한 걸음마다 <b>−0.04</b>(꾸물대면 손해 · 미래 보상은 살짝 깎아 더해요 — '할인', 4장). 처음엔 아무것도 몰라 헤매지만, <b>한 걸음 옮길 때마다 바로</b> 가치를 조금씩 갱신하며(끝까지 안 가도 갱신하는 'TD 방식' — 9·10장) 에피소드를 거듭하면 <b>각 칸의 가치</b>와 <b>화살표 정책</b>이 또렷해져요. "에피소드 ▶"를 눌러보세요.</p>
+    <p class="lead">로봇(🤖)이 <b>⭐ 목표</b>에 닿으면 <b>+1</b>, <b>🕳️ 함정</b>에 빠지면 <b>−1</b>, 한 걸음마다 <b>−0.04</b>(꾸물대면 손해). 처음엔 아무것도 몰라 헤매지만, 같은 길을 <b>반복</b>하다 보면 어느 칸이 좋고 어느 쪽으로 가야 할지가 저절로 드러나요. "에피소드 ▶"를 눌러보세요 — 칸 색과 화살표가 점점 또렷해집니다. <span style="color:var(--faint)">(색·화살표가 정확히 뭔지는 4·5장에서 배워요. 지금은 "초록=좋은 자리, 화살표=가야 할 방향"으로 충분.)</span></p>
     <div class="gridwrap">
       <div>
         <div id="gw"></div>
-        <div class="legend" style="margin-top:8px">⭐ 목표 +1 · 🕳️ 함정 −1 · 칸 색 = 그 자리서 앞으로 받을 <b style="color:var(--ink)">보상의 (할인된) 합 예상(가치)</b>, 초록↑·빨강↓ · <span style="color:var(--hot)">→ 가치가 가장 높은 방향(정책)</span></div>
+        <div class="legend" style="margin-top:8px">⭐ 목표 +1 · 🕳️ 함정 −1 · 칸 색 = 그 자리가 얼마나 <b style="color:var(--ink)">좋은 자리</b>인지(초록↑ 좋음·빨강↓ 나쁨) · <span style="color:var(--hot)">→ 가야 할 방향</span></div>
       </div>
       <div style="flex:1;min-width:220px">
         <div class="row" style="gap:8px;margin-bottom:10px">
@@ -213,7 +213,7 @@ const RL = VZ.RL;
       if(i===trail.length-1){
         const reached = RL.isGoal(env,pos[0],pos[1]);
         info(reached
-          ? `⭐ 목표 도달! ${steps}걸음, 받은 점수 합 ${VZ.fmt(ret,2)}(할인 전 — 칸 색 가치는 미래를 깎아 더해 이보다 작아요). 지나온 칸들의 가치가 갱신됐어요.`
+          ? `⭐ 목표 도달! ${steps}걸음, 받은 점수 합 ${VZ.fmt(ret,2)}. 지나온 칸들이 "좋은 자리"로 갱신됐어요.`
           : (RL.isPit(env,pos[0],pos[1]) ? `🕳️ 함정에 빠졌어요(−1). 이 근처 가치가 낮아집니다 — 다음엔 피하겠죠.` : `시간 초과 — 아직 길을 못 찾았어요. 계속 반복하면 좋아져요.`));
         busy=false; cancelAnim=null;
       }

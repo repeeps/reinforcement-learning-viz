@@ -170,7 +170,7 @@ function greedyGrid(V){ const g=[]; for(let r=0;r<4;r++){g.push([]);for(let c=0;
     document.getElementById('phE').className='phase '+(p==='eval'?'on':'off');
     document.getElementById('phI').className='phase '+(p==='imp'?'on':'off'); }
   function info(m){ document.getElementById('infoPI').innerHTML=`<div class="ttl" style="color:var(--v)">라운드 ${rounds} ${stable?'· ✅ 최적(정책 안정)':''}</div><p style="margin:0">${m}</p>`; }
-  document.getElementById('piEval').onclick=()=>{ const n=evaluate(); setPhase('eval'); render(); info(`현재 정책의 가치 V<sup>π</sup>를 끝까지 계산했어요 — <b>${n}번의 휩쓸이(스윕)</b>가 필요했죠(평가는 이렇게 무거워요). 이제 ② 개선을 눌러보세요.`); };
+  document.getElementById('piEval').onclick=()=>{ const n=evaluate(); setPhase('eval'); render(); info(`현재 정책의 가치 V<sup>π</sup>를 끝까지 계산했어요 — <b>${n}번의 스윕</b>(격자 전체 한 번 훑기)이 필요했죠(평가는 이렇게 무거워요). 이제 ② 개선을 눌러보세요.`); };
   document.getElementById('piImp').onclick=()=>{ const ch=improve(); if(ch) rounds++; setPhase('imp'); render();
     info(ch?'각 칸을 더 좋은 행동으로 갈아끼웠어요. 다시 ① 평가 → ② 개선 반복!':'정책이 안 바뀌었어요 → <b>최적 정책 도달!</b> 더 나은 행동이 없어요.'); };
   document.getElementById('piAuto').onclick=()=>{ for(let k=0;k<20;k++){ evaluate(); if(!improve()){break;} rounds++; } evaluate(); setPhase(null); render(); info(`자동 실행 완료 — ${rounds}번의 개선 라운드로 최적 정책 도달! 정책개선 횟수는 적지만, 매 라운드의 '평가'가 무거워요(트레이드오프).`); };

@@ -72,7 +72,7 @@
     <div class="chart-wrap" id="dots2"></div>
     <div class="legend" style="margin-top:8px">각 점 = 한 번의 목표값 표본 · 점선 = 참값 · 위=<span style="color:var(--k)">MC 리턴</span>, 아래=<span style="color:var(--q)">TD 한걸음 목표</span><br>※ 전이가 확률적이라 TD 목표는 <b>몇 개 값</b>에 모여요. 여기선 다음 칸 가치를 <b>참값</b>으로 둬 "한 걸음 목표 자체"의 분산만 비교해요(실제 학습은 추정을 써 편향이 더해짐).</div>
     <div id="info2" class="callout v" style="margin-top:12px"></div>
-    <p class="note" style="margin-top:12px">→ 둘 다 평균은 참값이라 <b>편향이 없어요</b>. 하지만 MC 목표(끝까지 리턴)는 크게 출렁이고(분산↑), TD 목표(한 걸음+다음 추정)는 훨씬 안정적(분산↓). 대신 TD는 추정에 기대니 초기엔 <b>편향</b>이 있어요 — 분산↓ vs 편향↑의 맞바꿈이에요.</p>
+    <p class="note" style="margin-top:12px">→ <b>이 데모는 두 목표의 "출렁임(분산)" 차이만 보여줘요</b>(공정한 비교를 위해 다음 칸 가치를 참값으로 고정했거든요). 보다시피 MC 목표(끝까지 리턴)는 크게 출렁이고(분산↑), TD 목표(한 걸음+다음 추정)는 훨씬 안정적(분산↓)이에요. <b>실제 학습</b>에선 그 "다음 추정"이 아직 틀린 값이라 TD에 <b>편향</b>이 더해져요 — 그래서 "분산↓ 대신 편향↑"의 맞바꿈이라 부릅니다.</p>
   </section>
 
   <!-- STEP 3 -->

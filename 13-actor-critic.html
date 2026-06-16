@@ -22,6 +22,7 @@
     <div class="tag">PART 4 · Chapter 13</div>
     <h1>Actor-Critic — 행동하는 배우 + 평가하는 비평가</h1>
     <p class="intro">정책경사(12장)는 정책을 직접 배우지만 <b>분산이 컸어요</b>(끝까지의 리턴으로 밀어서). 가치 기반은 안정적이지만 정책을 간접적으로 다뤘죠. <b>Actor-Critic</b>은 둘을 합쳐요 — <b>Actor</b>(정책)가 행동하고, <b>Critic</b>(가치)이 "방금 그거 예상보다 좋았어/나빴어"라고 즉시 평가해 Actor를 부드럽게 이끌어요. 현대 RL의 토대예요.</p>
+    <p class="note" style="margin-top:6px;color:var(--faint)">이 장은 <b>9장 TD 학습</b>의 도구 <b>TD 오차 δ</b>를 그대로 써요(δ = r + γV(s′) − V(s) = "실제 받은 보상 + 다음 칸 가치 − 예상했던 가치"). δ나 기호 s′·γ가 가물거리면 <b>9장을 먼저</b> 보면 훨씬 수월해요.</p>
   </header>
 
   <nav class="stepper" id="stepper">

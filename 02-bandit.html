@@ -81,7 +81,7 @@
     </div>
     <div class="chart-wrap" id="chart2"></div>
     <div class="legend" style="margin-top:8px">— <span style="color:var(--slate)">greedy</span>(ε=0, 순수 활용) · <span style="color:var(--q)">ε-greedy</span>(ε=0.1) · <span style="color:var(--good)">낙관적 초기화</span>(추정을 높게 시작해 저절로 탐험)</div>
-    <p class="note" style="margin-top:12px">→ <b>greedy</b>는 첫 턴 운으로 한 기계에 <b>갇혀</b> ~35%에 정체해요(운 좋게 최적에 갇힐 확률이 낮으니까). <b>낙관적 초기화</b>는 추정을 높게(everything looks great) 시작해, 당겨보고 실망하며 자연스럽게 여러 기계를 시도해요 — 무작위 없이도 탐험이 생기죠. (셋 다 같은 속도로 학습하게 맞췄고, 낙관만 출발 추정이 높아요.)</p>
+    <p class="note" style="margin-top:12px">→ <b>greedy</b>는 첫 턴 운으로 한 기계에 <b>갇혀</b> ~35%에 정체해요(운 좋게 최적에 갇힐 확률이 낮으니까). <b>낙관적 초기화</b>는 <b>처음엔 모든 기계가 최고라고 가정</b>해요(추정값을 높게 시작). 당겨볼수록 별로인 기계는 추정이 <b>실제값으로 내려가</b> 자연히 외면받고, 아직 안 당겨본 기계는 여전히 "최고"로 보여 끌리죠 — <b>무작위(ε) 없이도</b> 골고루 시도하게 됩니다. (셋 다 같은 속도로 학습하게 맞췄고, 낙관만 출발 추정이 높아요.)</p>
   </section>
 
   <!-- STEP 3 -->

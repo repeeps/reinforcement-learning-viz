@@ -39,6 +39,7 @@
     <span class="kicker" style="color:var(--hot)">Step 00 — Value Refers to Itself</span>
     <h2>"다음 칸의 가치"로 지금 가치를 적는다</h2>
     <p class="lead">복도 끝에 보물(💎+1)이 있어요. 오른쪽 정책에서 각 칸의 가치 = <b>(그 방향으로 갈 때 받는 보상) + γ·(도착 칸 가치)</b>. 걸음 보상은 0이고 <b>보물에 닿는 순간 +1</b>이라, 보물 직전 칸은 1.0, 그 왼쪽부터 0.9·0.81…로 γ가 한 번씩 더 곱해져요(γ=0.9). 칸을 클릭해 확인하세요.</p>
+    <p class="note" style="margin-top:-2px;color:var(--faint)">"가치가 다음 칸 가치에 기대면 영원히 안 끝나는 것 아닌가?" — 안 그래요. <b>끝 칸(보물)의 가치는 0으로 고정</b>돼 있어서, <b>거기서부터 거꾸로</b> 한 칸씩 채워가면 사슬이 깔끔히 풀려요. 그 고정된 끝점이 자기참조를 푸는 '닻'이에요.</p>
     <div id="strip0"></div>
     <div class="legend" style="margin-top:8px">숫자 = V(s) · 칸을 클릭하면 벨만 관계를 보여줘요</div>
     <div class="eq" id="eq0" style="margin-top:14px"></div>
