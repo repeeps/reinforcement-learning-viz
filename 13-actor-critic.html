@@ -130,7 +130,7 @@ const RL = VZ.RL;
   function Vgrid(){ const g=[]; for(let r=0;r<4;r++){g.push([]);for(let c=0;c<4;c++){g[r].push(RL.isTerminal(env,r,c)?0:V[K(r,c)]);}} return g; }
   function polGrid(){ const g=[]; for(let r=0;r<4;r++){g.push([]);for(let c=0;c<4;c++){
     if(RL.isTerminal(env,r,c)){g[r].push(null);continue;} const h=H[K(r,c)]; const mx=Math.max(...h),mn=Math.min(...h);
-    g[r].push(mx-mn<0.05?null:h.indexOf(mx)); }} return g; }
+    g[r].push(mx-mn<0.01?null:h.indexOf(mx)); }} return g; }
   function render(){
     document.getElementById('gw2').innerHTML = RL.gridSVG(env,{cell:60, V:Vgrid(), policy:polGrid(), showVals:true});
     if(hist.length>1) document.getElementById('chart2').innerHTML = VZ.linePlot([{pts:hist,color:'var(--v)',label:'보상'}],{W:300,H:160,xlab:'에피소드',ylab:'평균 보상',legend:false});
@@ -138,7 +138,7 @@ const RL = VZ.RL;
   }
   function info(m){ document.getElementById('info2').innerHTML=`<div class="ttl" style="color:var(--v)">에피소드 ${eps}회</div><p style="margin:0">${m}</p>`; }
   function add(n){ for(let i=0;i<n;i++) episode(); render(); const last=ret.slice(-10); const avg=last.reduce((a,b)=>a+b,0)/last.length;
-    info(`최근 10판 평균 보상 ≈ <b>${VZ.fmt(avg,2)}</b>. ${eps>=80?'Actor의 정책과 Critic의 가치가 함께 또렷해졌어요!':'화살표(정책)와 색(가치)이 같이 선명해져요.'}`); }
+    info(`최근 10판 평균 보상 ≈ <b>${VZ.fmt(avg,2)}</b>. ${eps>=80?'Actor의 정책과 Critic의 가치가 함께 또렷해졌어요!':'화살표(정책)와 색(가치)이 같이 선명해져요. <span style="color:var(--slate)">아직 정책이 뚜렷하지 않은 칸은 화살표가 안 보일 수 있어요 — 고장이 아니에요.</span>'}`); }
   document.getElementById('e10').onclick=()=>add(10);
   document.getElementById('e100').onclick=()=>add(100);
   document.getElementById('reset2').onclick=reset;

@@ -292,11 +292,14 @@ const RL = VZ.RL;
     let g=0, e=0;
     for(let t=0;t<TRIALS;t++){ g+=simulate('greedy',N); e+=simulate('eps',N); }
     const gAvg=g/TRIALS, eAvg=e/TRIALS, max=Math.max(gAvg,eAvg,1);
-    const epsWins = eAvg>=gAvg;
+    const tie = Math.abs(eAvg-gAvg) <= 1e-9;
+    const epsWins = !tie && eAvg>gAvg;
     document.getElementById('cmpBars').innerHTML =
-      VZ.barRow('항상 최고만', gAvg/max, {win:!epsWins, color:epsWins?'var(--slate)':null, pctText:VZ.fmt(gAvg,1)+'점'}) +
-      VZ.barRow('가끔 탐험', eAvg/max, {win:epsWins, color:epsWins?null:'var(--slate)', pctText:VZ.fmt(eAvg,1)+'점'}) +
-      `<div class="note" style="margin-top:8px">${epsWins
+      VZ.barRow('항상 최고만', gAvg/max, {win:!tie && !epsWins, color:(tie||epsWins)?'var(--slate)':null, pctText:VZ.fmt(gAvg,1)+'점'}) +
+      VZ.barRow('가끔 탐험', eAvg/max, {win:!tie && epsWins, color:(tie||epsWins)?null:'var(--slate)', pctText:VZ.fmt(eAvg,1)+'점'}) +
+      `<div class="note" style="margin-top:8px">${tie
+        ? '→ 이번엔 두 전략이 평균에서 <b>거의 같았어요</b>(무승부). 다시 돌려보면 보통 탐험이 조금씩 앞서요 — 한 번의 운보다 평균이 핵심.'
+        : epsWins
         ? '→ 이번에도 <b>가끔 탐험</b>이 평균에서 앞섰어요. 한 판이 아니라 300판 평균이라는 점이 중요해요.'
         : '→ 이번엔 우연히 <b>활용</b>이 근소하게 앞섰네요. 다시 돌려보면 보통 탐험이 이겨요 — 한 번의 운보다 평균이 핵심.'}</div>`;
   }
